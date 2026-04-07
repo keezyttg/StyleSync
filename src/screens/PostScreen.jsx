@@ -63,7 +63,14 @@ export default function PostScreen({ navigation, route }) {
             <TouchableOpacity style={styles.retakeBtn} onPress={() => setImageUri(null)}>
               <Text style={styles.retakeBtnText}>← Retake</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.postBtn, loading && styles.postBtnDisabled]} onPress={handlePost} disabled={loading}>
+            <TouchableOpacity
+              style={[styles.postBtn, loading && styles.postBtnDisabled]}
+              onPress={handlePost}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel={loading ? 'Posting' : 'Post'}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               {loading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.postBtnText}>Post</Text>}
             </TouchableOpacity>
           </View>

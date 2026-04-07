@@ -1,20 +1,43 @@
+// Design tokens for StyleSync
+// Purpose: centralize color, spacing, typography, and elevation tokens.
+// Keep existing named exports (COLORS, SPACING, BORDER_RADIUS, FONT_SIZE)
+// so existing imports continue to work.
+
 export const COLORS = {
+  // Brand
   primary: '#AF11D3',
   primaryLight: '#D44EF0',
   primaryDark: '#8A0DAA',
-  black: '#000000',
+
+  // Neutral / background
   white: '#FFFFFF',
+  black: '#000000',
   background: '#FFFFFF',
-  surface: '#F5F5F5',
-  border: '#E0E0E0',
-  textPrimary: '#111111',
-  textSecondary: '#888888',
-  textMuted: '#BBBBBB',
+  surface: '#F7F7F8',
+  card: '#FFFFFF',
+  border: '#E6E6EA',
+  overlay: 'rgba(0,0,0,0.4)',
+
+  // Text
+  textPrimary: '#111827', // near-black for high contrast
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  placeholder: '#D1D5DB',
+
+  // Status
+  success: '#16A34A',
+  error: '#DC2626',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+
+  // Accent
   star: '#FFB800',
-  error: '#E53935',
-  success: '#43A047',
+
+  // Semantic aliases (recommended to use these in UI)
+  primaryTextOnPrimary: '#FFFFFF',
 };
 
+// Spacing scale (4pt baseline)
 export const SPACING = {
   xs: 4,
   sm: 8,
@@ -22,22 +45,86 @@ export const SPACING = {
   lg: 24,
   xl: 32,
   xxl: 48,
+  gutter: 16,
 };
 
 export const BORDER_RADIUS = {
-  sm: 8,
+  sm: 6,
   md: 12,
   lg: 16,
   xl: 24,
   full: 9999,
 };
 
+// Font sizes and a small typography helper
 export const FONT_SIZE = {
-  xs: 11,
-  sm: 13,
-  md: 15,
+  xs: 12,
+  sm: 14,
+  md: 16,
   lg: 18,
-  xl: 22,
-  xxl: 28,
-  xxxl: 36,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+export const TYPOGRAPHY = {
+  fontFamily: {
+    system: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  weight: {
+    regular: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+    heavy: '800',
+  },
+  lineHeight: {
+    tight: 18,
+    normal: 22,
+    relaxed: 28,
+  },
+};
+
+// Simple shadow presets for cards and raised elements
+export const ELEVATION = {
+  low: {
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+  },
+  medium: {
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+  },
+  high: {
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+  },
+};
+
+// Utility sizes for images/thumbnails used across the app
+export const SIZES = {
+  avatar: 40,
+  avatarLarge: 72,
+  itemThumb: 100,
+  navBarHeight: 56,
+};
+
+// Backwards compatibility: keep single-level exports
+export default {
+  COLORS,
+  SPACING,
+  BORDER_RADIUS,
+  FONT_SIZE,
+  TYPOGRAPHY,
+  ELEVATION,
+  SIZES,
 };

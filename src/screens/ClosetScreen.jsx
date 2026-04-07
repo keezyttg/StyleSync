@@ -49,7 +49,13 @@ export default function ClosetScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>My Closet</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddItem')}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => navigation.navigate('AddItem')}
+          accessibilityRole="button"
+          accessibilityLabel="Add item"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Text style={styles.addBtnText}>+ Add Item</Text>
         </TouchableOpacity>
       </View>
@@ -111,10 +117,16 @@ export default function ClosetScreen({ navigation }) {
           contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>Your closet is empty</Text>
-              <Text style={styles.emptyText}>Start adding pieces to track your wardrobe, cost-per-wear, and build outfits.</Text>
-              <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('AddItem')}>
-                <Text style={styles.emptyBtnText}>+ Add Your First Item</Text>
+              <Text style={styles.emptyTitle}>Your closet is empty — let’s get you started</Text>
+              <Text style={styles.emptyText}>Add pieces to track cost-per-wear, build outfits, and get outfit ideas. Snap a photo or import from your gallery to begin.</Text>
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={() => navigation.navigate('AddItem')}
+                accessibilityRole="button"
+                accessibilityLabel="Add your first item"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.emptyBtnText}>Add your first piece</Text>
               </TouchableOpacity>
             </View>
           }
