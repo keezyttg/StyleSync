@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { getClosetItems } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
+import { ClosetRowSkeleton } from '../components/SkeletonLoader';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
@@ -99,14 +100,24 @@ export default function ClosetScreen({ navigation }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+        <View style={{ paddingHorizontal: SPACING.md }}>
+          {[1, 2, 3, 4].map(k => <ClosetRowSkeleton key={k} />)}
+        </View>
       ) : (
         <FlatList
           data={items}
           keyExtractor={item => item.id}
           renderItem={({ item }) => <ItemCard item={item} />}
           contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
-          ListEmptyComponent={<Text style={styles.emptyText}>Your closet is empty. Add your first item!</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>Your closet is empty</Text>
+              <Text style={styles.emptyText}>Start adding pieces to track your wardrobe, cost-per-wear, and build outfits.</Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('AddItem')}>
+                <Text style={styles.emptyBtnText}>+ Add Your First Item</Text>
+              </TouchableOpacity>
+            </View>
+          }
         />
       )}
     </View>
@@ -143,5 +154,9 @@ const styles = StyleSheet.create({
   tagChip: { marginTop: SPACING.xs, alignSelf: 'flex-start', backgroundColor: COLORS.textPrimary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.sm },
   tagText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '600' },
   wornBadge: { position: 'absolute', bottom: SPACING.sm, right: SPACING.sm, fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '500' },
-  emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 60, fontSize: FONT_SIZE.md },
+  emptyContainer: { alignItems: 'center', paddingTop: 60, paddingHorizontal: SPACING.xl, gap: SPACING.sm },
+  emptyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.textPrimary },
+  emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20 },
+  emptyBtn: { marginTop: SPACING.sm, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.xl, paddingVertical: 12 },
+  emptyBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
 });

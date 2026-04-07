@@ -40,7 +40,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
           <View>
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
+              <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Text style={styles.backText}>‹ Back</Text>
               </TouchableOpacity>
             </View>

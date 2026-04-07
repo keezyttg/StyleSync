@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, Image, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
+  StyleSheet, RefreshControl,
 } from 'react-native';
 import { getTrendingOutfits, getCommunityOutfits } from '../services/outfits';
+import { FeedCardSkeleton } from '../components/SkeletonLoader';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export default function FeedScreen({ navigation }) {
@@ -12,13 +13,17 @@ export default function FeedScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [error, setError] = useState(null);
+
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = tab === 'Trending' ? await getTrendingOutfits() : await getCommunityOutfits();
       setOutfits(data);
     } catch (err) {
       console.log('Feed load error:', err);
+      setError('Could not load outfits. Check your connection.');
     }
     setLoading(false);
   }, [tab]);
@@ -102,7 +107,18 @@ export default function FeedScreen({ navigation }) {
       )}
 
       {loading ? (
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+        <View style={{ padding: SPACING.md, gap: SPACING.md }}>
+          <FeedCardSkeleton />
+          <FeedCardSkeleton />
+          <FeedCardSkeleton />
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={load}>
+            <Text style={styles.retryBtnText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={outfits}
@@ -110,7 +126,15 @@ export default function FeedScreen({ navigation }) {
           renderItem={({ item }) => <OutfitCard item={item} />}
           contentContainerStyle={{ padding: SPACING.md, gap: SPACING.md }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-          ListEmptyComponent={<Text style={styles.emptyText}>No outfits yet. Be the first to post!</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>Nothing here yet</Text>
+              <Text style={styles.emptyText}>Be the first to post an outfit and inspire others.</Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('Camera')}>
+                <Text style={styles.emptyBtnText}>Post Your First Outfit</Text>
+              </TouchableOpacity>
+            </View>
+          }
         />
       )}
     </View>
@@ -147,5 +171,13 @@ const styles = StyleSheet.create({
   ratingText: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.textPrimary, marginLeft: 6 },
   ratingCount: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginLeft: 4 },
   savesText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'right' },
-  emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 60, fontSize: FONT_SIZE.md },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl, marginTop: 60 },
+  errorText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, textAlign: 'center', marginBottom: SPACING.md },
+  retryBtn: { borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.lg, paddingVertical: 10 },
+  retryBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  emptyContainer: { alignItems: 'center', paddingTop: 60, paddingHorizontal: SPACING.xl, gap: SPACING.sm },
+  emptyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.textPrimary },
+  emptyText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
+  emptyBtn: { marginTop: SPACING.sm, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.xl, paddingVertical: 12 },
+  emptyBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
 });

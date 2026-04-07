@@ -13,6 +13,7 @@ export default function PostScreen({ navigation, route }) {
   const [caption, setCaption] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -34,17 +35,20 @@ export default function PostScreen({ navigation, route }) {
 
   async function handlePost() {
     if (!imageUri || !user) { Alert.alert('Add a photo first'); return; }
+    if (loading) return;
     setLoading(true);
+    setUploadError(null);
     try {
       const imageURL = await uploadOutfitImage(imageUri, user.uid);
       await createOutfit({ userId: user.uid, imageURL, caption, tags: selectedTags, itemIds: [] });
       setImageUri(null);
       setCaption('');
       setSelectedTags([]);
+      setUploadError(null);
       navigation.navigate('Feed');
       Alert.alert('Posted!', 'Your outfit is live.');
     } catch (err) {
-      Alert.alert('Error', err.message);
+      setUploadError('Upload failed. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -64,7 +68,15 @@ export default function PostScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.form}>
-            <TextInput style={styles.captionInput} placeholder="Add a Caption..." value={caption} onChangeText={setCaption} multiline maxLength={150} />
+            {uploadError && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>{uploadError}</Text>
+                <TouchableOpacity onPress={handlePost} style={styles.retryInlineBtn}>
+                  <Text style={styles.retryInlineText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <TextInput style={styles.captionInput} placeholder="Add a Caption..." placeholderTextColor={COLORS.textMuted} value={caption} onChangeText={setCaption} multiline maxLength={150} />
             <Text style={styles.charCount}>{caption.length}/150</Text>
             <Text style={styles.sectionLabel}>Style Tags</Text>
             <View style={styles.tagsRow}>
@@ -79,9 +91,10 @@ export default function PostScreen({ navigation, route }) {
       ) : (
         <View style={styles.pickContainer}>
           <Text style={styles.pickTitle}>Share your outfit</Text>
-          <TouchableOpacity style={styles.cameraBtn} onPress={takePhoto}>
+          <Text style={styles.pickSubtitle}>Capture or upload a photo to post</Text>
+          <TouchableOpacity style={styles.cameraBtn} onPress={() => navigation.navigate('Camera')}>
             <Text style={styles.cameraBtnIcon}>📷</Text>
-            <Text style={styles.cameraBtnText}>Take Photo</Text>
+            <Text style={styles.cameraBtnText}>Open Camera</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.galleryBtn} onPress={pickImage}>
             <Text style={styles.galleryBtnText}>Choose from Gallery</Text>
@@ -112,9 +125,14 @@ const styles = StyleSheet.create({
   tagTextActive: { color: COLORS.white, fontWeight: '700' },
   pickContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: SPACING.xl, gap: SPACING.lg },
   pickTitle: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.textPrimary },
+  pickSubtitle: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: -SPACING.sm },
   cameraBtn: { width: '100%', backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md, paddingVertical: 56, alignItems: 'center', gap: SPACING.sm },
   cameraBtnIcon: { fontSize: 40 },
   cameraBtnText: { color: COLORS.white, fontSize: FONT_SIZE.lg, fontWeight: '700' },
   galleryBtn: { width: '100%', borderWidth: 1, borderColor: COLORS.border, borderRadius: BORDER_RADIUS.md, paddingVertical: 16, alignItems: 'center' },
   galleryBtnText: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.textPrimary },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF0F0', borderRadius: BORDER_RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: '#FFCCCC' },
+  errorBannerText: { flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.error, lineHeight: 18 },
+  retryInlineBtn: { marginLeft: SPACING.sm, paddingHorizontal: SPACING.sm, paddingVertical: 6, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, borderColor: COLORS.error },
+  retryInlineText: { fontSize: FONT_SIZE.sm, color: COLORS.error, fontWeight: '700' },
 });
