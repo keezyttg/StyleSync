@@ -9,7 +9,7 @@ const STYLE_TAGS = ['Streetwear', 'Fall', 'Casual', 'Formal', 'Minimalist', 'Vin
 
 export default function PostScreen({ navigation, route }) {
   const { user } = useAuth();
-  const [imageUri, setImageUri] = useState(null);
+  const [imageUri, setImageUri] = useState(route.params?.imageUri ?? null);
   const [caption, setCaption] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [loading, setLoading] = useState(false);

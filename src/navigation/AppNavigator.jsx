@@ -15,6 +15,7 @@ import OutfitDetailScreen from '../screens/OutfitDetailScreen';
 import BuildOutfitScreen from '../screens/BuildOutfitScreen';
 import AddItemScreen from '../screens/AddItemScreen';
 import CommunityDetailScreen from '../screens/CommunityDetailScreen';
+import CameraScreen from '../screens/CameraScreen';
 
 import { COLORS } from '../constants/theme';
 
@@ -68,7 +69,7 @@ function MainTabs({ navigation }) {
         component={PostScreen}
         options={{
           tabBarButton: () => (
-            <CenterPostButton onPress={() => navigation.navigate('Post')} />
+            <CenterPostButton onPress={() => navigation.navigate('Camera')} />
           ),
         }}
       />
@@ -107,6 +108,7 @@ function AppStack() {
       <Stack.Screen name="BuildOutfit" component={BuildOutfitScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="AddItem" component={AddItemScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} />
+      <Stack.Screen name="Camera" component={CameraScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
     </Stack.Navigator>
   );
 }
