@@ -13,6 +13,8 @@ import DiscoverScreen from '../screens/DiscoverScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OutfitDetailScreen from '../screens/OutfitDetailScreen';
 import BuildOutfitScreen from '../screens/BuildOutfitScreen';
+import AddItemScreen from '../screens/AddItemScreen';
+import CommunityDetailScreen from '../screens/CommunityDetailScreen';
 
 import { COLORS } from '../constants/theme';
 
@@ -51,7 +53,7 @@ function MainTabs({ navigation }) {
         name="Feed"
         component={FeedScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="📷" label="Camera" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabBarIcon icon="🏠" label="Feed" focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -103,6 +105,8 @@ function AppStack() {
       <Stack.Screen name="OutfitDetail" component={OutfitDetailScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Post" component={PostScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="BuildOutfit" component={BuildOutfitScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="AddItem" component={AddItemScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} />
     </Stack.Navigator>
   );
 }

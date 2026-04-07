@@ -85,7 +85,7 @@ export default function DiscoverScreen({ navigation }) {
           data={communities}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.communityRow}>
+            <TouchableOpacity style={styles.communityRow} onPress={() => navigation.navigate('CommunityDetail', { community: item })}>
               <Text style={styles.communityStar}>☆</Text>
               <View style={styles.communityInfo}>
                 <Text style={styles.communityName}>{item.name}</Text>

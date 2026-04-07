@@ -4,7 +4,6 @@ import {
   getDocs,
   doc,
   query,
-  orderBy,
   where,
   limit,
   updateDoc,
@@ -42,23 +41,21 @@ export async function createOutfit(data) {
 }
 
 export async function getTrendingOutfits(limitCount = 20) {
-  const q = query(
-    collection(db, 'outfits'),
-    orderBy('avgRating', 'desc'),
-    limit(limitCount)
-  );
+  const q = query(collection(db, 'outfits'), limit(limitCount * 3));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return docs
+    .sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0))
+    .slice(0, limitCount);
 }
 
 export async function getCommunityOutfits(limitCount = 20) {
-  const q = query(
-    collection(db, 'outfits'),
-    orderBy('createdAt', 'desc'),
-    limit(limitCount)
-  );
+  const q = query(collection(db, 'outfits'), limit(limitCount * 3));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return docs
+    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
+    .slice(0, limitCount);
 }
 
 export async function getUserOutfits(userId) {
