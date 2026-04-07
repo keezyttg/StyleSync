@@ -1,31 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
+  View, Text, FlatList, Image, TouchableOpacity,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { getTrendingOutfits, getCommunityOutfits } from '../services/outfits';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
-type Tab = 'Trending' | 'Community';
-
-export default function FeedScreen({ navigation }: any) {
-  const [tab, setTab] = useState<Tab>('Trending');
-  const [outfits, setOutfits] = useState<any[]>([]);
+export default function FeedScreen({ navigation }) {
+  const [tab, setTab] = useState('Trending');
+  const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = tab === 'Trending'
-      ? await getTrendingOutfits()
-      : await getCommunityOutfits();
-    setOutfits(data);
+    try {
+      const data = tab === 'Trending' ? await getTrendingOutfits() : await getCommunityOutfits();
+      setOutfits(data);
+    } catch (err) {
+      console.log('Feed load error:', err);
+    }
     setLoading(false);
   }, [tab]);
 
@@ -37,7 +31,7 @@ export default function FeedScreen({ navigation }: any) {
     setRefreshing(false);
   }
 
-  function StarRow({ rating, count }: { rating: number; count: number }) {
+  function StarRow({ rating, count }) {
     return (
       <View style={styles.starRow}>
         {[1, 2, 3, 4, 5].map(i => (
@@ -49,13 +43,9 @@ export default function FeedScreen({ navigation }: any) {
     );
   }
 
-  function OutfitCard({ item }: { item: any }) {
+  function OutfitCard({ item }) {
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
-        activeOpacity={0.9}
-      >
+      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('OutfitDetail', { outfit: item })} activeOpacity={0.9}>
         <View style={styles.cardHeader}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarText}>{(item.displayName || 'U')[0].toUpperCase()}</Text>
@@ -86,7 +76,6 @@ export default function FeedScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoRow}>
           <Text style={styles.logoBlack}>Style</Text>
@@ -97,9 +86,8 @@ export default function FeedScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* Tab Toggle */}
       <View style={styles.tabRow}>
-        {(['Trending', 'Community'] as Tab[]).map(t => (
+        {['Trending', 'Community'].map(t => (
           <TouchableOpacity key={t} style={styles.tabBtn} onPress={() => setTab(t)}>
             <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
             {tab === t && <View style={styles.tabUnderline} />}
@@ -122,9 +110,7 @@ export default function FeedScreen({ navigation }: any) {
           renderItem={({ item }) => <OutfitCard item={item} />}
           contentContainerStyle={{ padding: SPACING.md, gap: SPACING.md }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No outfits yet. Be the first to post!</Text>
-          }
+          ListEmptyComponent={<Text style={styles.emptyText}>No outfits yet. Be the first to post!</Text>}
         />
       )}
     </View>
@@ -133,14 +119,7 @@ export default function FeedScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.white },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingTop: 56,
-    paddingBottom: SPACING.sm,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.sm },
   logoRow: { flexDirection: 'row' },
   logoBlack: { fontSize: 24, fontWeight: '900', color: COLORS.textPrimary },
   logoMagenta: { fontSize: 24, fontStyle: 'italic', color: COLORS.primary },
@@ -152,47 +131,15 @@ const styles = StyleSheet.create({
   tabUnderline: { height: 2, backgroundColor: COLORS.textPrimary, borderRadius: 1, marginTop: 4 },
   sectionLabel: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   sectionText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.md,
-  },
-  avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-  },
+  card: { backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md },
+  avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
   avatarText: { color: COLORS.white, fontWeight: '700' },
   headerInfo: { flex: 1 },
   username: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.textPrimary },
-  followBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.full,
-  },
+  followBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: BORDER_RADIUS.full },
   followBtnText: { color: COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: '700' },
-  tagChip: {
-    position: 'absolute',
-    top: 70,
-    left: SPACING.md,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.sm,
-    zIndex: 10,
-  },
+  tagChip: { position: 'absolute', top: 70, left: SPACING.md, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.sm, zIndex: 10 },
   tagChipText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '600' },
   outfitImage: { width: '100%', height: 280 },
   cardFooter: { padding: SPACING.md },

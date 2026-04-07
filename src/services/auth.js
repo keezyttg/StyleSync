@@ -4,12 +4,11 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
-  User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-export async function signUp(email: string, password: string, username: string): Promise<FirebaseUser> {
+export async function signUp(email, password, username) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, { displayName: username });
 
@@ -30,20 +29,20 @@ export async function signUp(email: string, password: string, username: string):
   return credential.user;
 }
 
-export async function signIn(email: string, password: string): Promise<FirebaseUser> {
+export async function signIn(email, password) {
   const credential = await signInWithEmailAndPassword(auth, email, password);
   return credential.user;
 }
 
-export async function logOut(): Promise<void> {
+export async function logOut() {
   await signOut(auth);
 }
 
-export async function resetPassword(email: string): Promise<void> {
+export async function resetPassword(email) {
   await sendPasswordResetEmail(auth, email);
 }
 
-export async function getUserProfile(uid: string) {
+export async function getUserProfile(uid) {
   const snap = await getDoc(doc(db, 'users', uid));
   return snap.exists() ? snap.data() : null;
 }

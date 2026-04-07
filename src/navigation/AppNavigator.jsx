@@ -14,12 +14,12 @@ import ProfileScreen from '../screens/ProfileScreen';
 import OutfitDetailScreen from '../screens/OutfitDetailScreen';
 import BuildOutfitScreen from '../screens/BuildOutfitScreen';
 
-import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
+import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function TabBarIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
+function TabBarIcon({ icon, label, focused }) {
   return (
     <View style={tabStyles.iconContainer}>
       <Text style={[tabStyles.icon, focused && tabStyles.iconFocused]}>{icon}</Text>
@@ -28,7 +28,7 @@ function TabBarIcon({ icon, label, focused }: { icon: string; label: string; foc
   );
 }
 
-function CenterPostButton({ onPress }: { onPress: () => void }) {
+function CenterPostButton({ onPress }) {
   return (
     <TouchableOpacity style={tabStyles.centerBtn} onPress={onPress} activeOpacity={0.85}>
       <View style={tabStyles.centerBtnInner}>
@@ -38,7 +38,7 @@ function CenterPostButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-function MainTabs({ navigation }: any) {
+function MainTabs({ navigation }) {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -65,7 +65,7 @@ function MainTabs({ navigation }: any) {
         name="Post"
         component={PostScreen}
         options={{
-          tabBarButton: (props) => (
+          tabBarButton: () => (
             <CenterPostButton onPress={() => navigation.navigate('Post')} />
           ),
         }}
@@ -100,21 +100,9 @@ function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={MainTabs} />
-      <Stack.Screen
-        name="OutfitDetail"
-        component={OutfitDetailScreen}
-        options={{ presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="Post"
-        component={PostScreen}
-        options={{ presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="BuildOutfit"
-        component={BuildOutfitScreen}
-        options={{ presentation: 'modal' }}
-      />
+      <Stack.Screen name="OutfitDetail" component={OutfitDetailScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="Post" component={PostScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="BuildOutfit" component={BuildOutfitScreen} options={{ presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }
@@ -145,11 +133,7 @@ const tabStyles = StyleSheet.create({
   iconFocused: { color: COLORS.primary },
   label: { fontSize: 10, color: COLORS.textMuted, marginTop: 2 },
   labelFocused: { color: COLORS.primary, fontWeight: '600' },
-  centerBtn: {
-    top: -20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  centerBtn: { top: -20, justifyContent: 'center', alignItems: 'center' },
   centerBtnInner: {
     width: 60,
     height: 60,

@@ -1,55 +1,43 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { rateOutfit, saveOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
-export default function OutfitDetailScreen({ route, navigation }: any) {
+export default function OutfitDetailScreen({ route, navigation }) {
   const { outfit } = route.params;
   const { user } = useAuth();
   const [userRating, setUserRating] = useState(0);
   const [saved, setSaved] = useState(false);
 
-  async function handleRate(value: number) {
+  async function handleRate(value) {
     if (!user) return;
     try {
       await rateOutfit(outfit.id, user.uid, value);
       setUserRating(value);
-    } catch (err: any) {
+    } catch (err) {
       Alert.alert('Error', err.message);
     }
   }
 
   async function handleSave() {
-    if (!user) return;
-    if (saved) return;
+    if (!user || saved) return;
     try {
       await saveOutfit(user.uid, outfit.id);
       setSaved(true);
-    } catch (err: any) {
+    } catch (err) {
       Alert.alert('Error', err.message);
     }
   }
 
   return (
     <View style={styles.container}>
-      {/* Full-screen image with star overlay */}
       <Image source={{ uri: outfit.imageURL }} style={styles.image} resizeMode="cover" />
 
-      {/* Back button */}
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
         <Text style={styles.backText}>‹</Text>
       </TouchableOpacity>
 
-      {/* Star rating overlay */}
       <View style={styles.starOverlay}>
         {[1, 2, 3, 4, 5].map(i => (
           <TouchableOpacity key={i} onPress={() => handleRate(i)} style={styles.starBtn}>
@@ -58,7 +46,6 @@ export default function OutfitDetailScreen({ route, navigation }: any) {
         ))}
       </View>
 
-      {/* Bottom sheet */}
       <ScrollView style={styles.sheet}>
         <View style={styles.sheetHandle} />
 
@@ -74,10 +61,9 @@ export default function OutfitDetailScreen({ route, navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* Clothing items row */}
         {outfit.items && outfit.items.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.itemsRow}>
-            {outfit.items.map((item: any, idx: number) => (
+            {outfit.items.map((item, idx) => (
               <View key={idx} style={styles.itemCard}>
                 <Image source={{ uri: item.imageURL }} style={styles.itemImage} />
                 <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
@@ -87,10 +73,7 @@ export default function OutfitDetailScreen({ route, navigation }: any) {
           </ScrollView>
         )}
 
-        <TouchableOpacity
-          style={styles.saveOutfitBtn}
-          onPress={handleSave}
-        >
+        <TouchableOpacity style={styles.saveOutfitBtn} onPress={handleSave}>
           <Text style={styles.saveOutfitText}>+ Save Outfit</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -101,51 +84,14 @@ export default function OutfitDetailScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   image: { width: '100%', height: '65%' },
-  backBtn: {
-    position: 'absolute',
-    top: 56,
-    left: SPACING.md,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 20,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  backBtn: { position: 'absolute', top: 56, left: SPACING.md, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   backText: { color: COLORS.white, fontSize: 24, fontWeight: '300' },
-  starOverlay: {
-    position: 'absolute',
-    right: SPACING.md,
-    top: '25%',
-    gap: SPACING.sm,
-  },
-  starBtn: {
-    width: 44,
-    height: 44,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  starOverlay: { position: 'absolute', right: SPACING.md, top: '25%', gap: SPACING.sm },
+  starBtn: { width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   starIcon: { fontSize: 22, color: 'rgba(255,255,255,0.5)' },
   starFilled: { color: COLORS.star },
-  sheet: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -24,
-    paddingHorizontal: SPACING.md,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: COLORS.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: SPACING.md,
-    marginBottom: SPACING.md,
-  },
+  sheet: { flex: 1, backgroundColor: COLORS.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -24, paddingHorizontal: SPACING.md },
+  sheetHandle: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginTop: SPACING.md, marginBottom: SPACING.md },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   outfitLabel: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.textPrimary },
   outfitMeta: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
@@ -156,12 +102,6 @@ const styles = StyleSheet.create({
   itemImage: { width: 90, height: 90, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.surface },
   itemName: { fontSize: FONT_SIZE.xs, fontWeight: '600', marginTop: 4, color: COLORS.textPrimary },
   itemCategory: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
-  saveOutfitBtn: {
-    backgroundColor: COLORS.textPrimary,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
+  saveOutfitBtn: { backgroundColor: COLORS.textPrimary, borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.xl },
   saveOutfitText: { color: COLORS.white, fontSize: FONT_SIZE.md, fontWeight: '700' },
 });

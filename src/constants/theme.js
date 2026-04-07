@@ -15,11 +15,6 @@ export const COLORS = {
   success: '#43A047',
 };
 
-export const FONTS = {
-  regular: 'System',
-  bold: 'System',
-};
-
 export const SPACING = {
   xs: 4,
   sm: 8,

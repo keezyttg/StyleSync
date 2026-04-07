@@ -1,40 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { getUserProfile } from '../services/auth';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { getUserProfile, logOut } from '../services/auth';
 import { getUserOutfits } from '../services/outfits';
-import { logOut } from '../services/auth';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
-type Tab = 'My Outfits' | 'Saved';
-
-export default function ProfileScreen({ navigation }: any) {
+export default function ProfileScreen({ navigation }) {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
-  const [outfits, setOutfits] = useState<any[]>([]);
-  const [tab, setTab] = useState<Tab>('My Outfits');
+  const [profile, setProfile] = useState(null);
+  const [outfits, setOutfits] = useState([]);
+  const [tab, setTab] = useState('My Outfits');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user) { setLoading(false); return; }
     (async () => {
       try {
-        const [prof, outs] = await Promise.all([
-          getUserProfile(user.uid),
-          getUserOutfits(user.uid),
-        ]);
+        const [prof, outs] = await Promise.all([getUserProfile(user.uid), getUserOutfits(user.uid)]);
         setProfile(prof);
         setOutfits(outs);
       } catch (err) {
@@ -45,7 +27,7 @@ export default function ProfileScreen({ navigation }: any) {
     })();
   }, [user]);
 
-  async function handleSignOut() {
+  function handleSignOut() {
     Alert.alert('Sign Out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign Out', style: 'destructive', onPress: () => logOut() },
@@ -53,11 +35,7 @@ export default function ProfileScreen({ navigation }: any) {
   }
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator color={COLORS.primary} size="large" />
-      </View>
-    );
+    return <View style={styles.loadingContainer}><ActivityIndicator color={COLORS.primary} size="large" /></View>;
   }
 
   return (
@@ -68,7 +46,6 @@ export default function ProfileScreen({ navigation }: any) {
         numColumns={2}
         ListHeaderComponent={
           <View>
-            {/* Profile Header */}
             <View style={styles.profileHeader}>
               <Text style={styles.pageTitle}>Profile</Text>
               <TouchableOpacity onPress={handleSignOut}>
@@ -76,7 +53,6 @@ export default function ProfileScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            {/* Avatar */}
             <View style={styles.avatarSection}>
               {profile?.photoURL ? (
                 <Image source={{ uri: profile.photoURL }} style={styles.avatar} />
@@ -91,7 +67,6 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.username}>@{profile?.username ?? 'user'}</Text>
             </View>
 
-            {/* Stats */}
             <View style={styles.statsRow}>
               {[
                 { value: profile?.outfitCount ?? 0, label: 'Outfits' },
@@ -105,9 +80,8 @@ export default function ProfileScreen({ navigation }: any) {
               ))}
             </View>
 
-            {/* Tabs */}
             <View style={styles.tabRow}>
-              {(['My Outfits', 'Saved'] as Tab[]).map(t => (
+              {['My Outfits', 'Saved'].map(t => (
                 <TouchableOpacity key={t} style={styles.tabBtn} onPress={() => setTab(t)}>
                   <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
                   {tab === t && <View style={styles.tabUnderline} />}
@@ -117,10 +91,7 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
-          >
+          <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}>
             <Image source={{ uri: item.imageURL }} style={styles.gridImage} resizeMode="cover" />
           </TouchableOpacity>
         )}
@@ -138,53 +109,20 @@ export default function ProfileScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.white },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  profileHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingTop: 56,
-    paddingBottom: SPACING.md,
-  },
+  profileHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.md },
   pageTitle: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.textPrimary },
   signOutText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '600' },
   avatarSection: { alignItems: 'center', paddingBottom: SPACING.lg },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: SPACING.sm },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
+  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
   avatarInitial: { fontSize: 40, color: COLORS.white, fontWeight: '700' },
   displayName: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.textPrimary },
   username: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginTop: 4 },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.lg,
-    gap: SPACING.sm,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-  },
+  statsRow: { flexDirection: 'row', paddingHorizontal: SPACING.md, marginBottom: SPACING.lg, gap: SPACING.sm },
+  statBox: { flex: 1, backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.md, paddingVertical: SPACING.md, alignItems: 'center' },
   statValue: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.textPrimary },
   statLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
-  tabRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-  },
+  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm, paddingHorizontal: SPACING.md },
   tabBtn: { marginRight: SPACING.xl, paddingBottom: SPACING.sm },
   tabText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '500' },
   tabTextActive: { color: COLORS.textPrimary, fontWeight: '700' },

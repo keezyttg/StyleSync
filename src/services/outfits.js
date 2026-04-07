@@ -2,7 +2,6 @@ import {
   collection,
   addDoc,
   getDocs,
-  getDoc,
   doc,
   query,
   orderBy,
@@ -16,7 +15,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
 
-export async function uploadOutfitImage(uri: string, userId: string): Promise<string> {
+export async function uploadOutfitImage(uri, userId) {
   const response = await fetch(uri);
   const blob = await response.blob();
   const filename = `outfits/${userId}/${Date.now()}.jpg`;
@@ -25,14 +24,7 @@ export async function uploadOutfitImage(uri: string, userId: string): Promise<st
   return getDownloadURL(storageRef);
 }
 
-export async function createOutfit(data: {
-  userId: string;
-  imageURL: string;
-  caption: string;
-  tags: string[];
-  itemIds: string[];
-  communityId?: string;
-}) {
+export async function createOutfit(data) {
   const docRef = await addDoc(collection(db, 'outfits'), {
     ...data,
     ratingTotal: 0,
@@ -69,19 +61,17 @@ export async function getCommunityOutfits(limitCount = 20) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-export async function getUserOutfits(userId: string) {
-  // Simple where-only query avoids needing a composite Firestore index
+export async function getUserOutfits(userId) {
   const q = query(
     collection(db, 'outfits'),
     where('userId', '==', userId)
   );
   const snap = await getDocs(q);
-  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-  // Sort client-side
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   return docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
 }
 
-export async function rateOutfit(outfitId: string, userId: string, value: number) {
+export async function rateOutfit(outfitId, userId, value) {
   const ratingRef = doc(db, 'outfits', outfitId, 'ratings', userId);
 
   await runTransaction(db, async (tx) => {
@@ -96,7 +86,6 @@ export async function rateOutfit(outfitId: string, userId: string, value: number
     let newCount = outfit.ratingCount;
 
     if (ratingSnap.exists()) {
-      // Replace existing rating
       const oldValue = ratingSnap.data().value;
       newTotal = newTotal - oldValue + value;
     } else {
@@ -115,7 +104,7 @@ export async function rateOutfit(outfitId: string, userId: string, value: number
   });
 }
 
-export async function saveOutfit(userId: string, outfitId: string) {
+export async function saveOutfit(userId, outfitId) {
   await addDoc(collection(db, 'users', userId, 'saved'), {
     outfitId,
     savedAt: serverTimestamp(),

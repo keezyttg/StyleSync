@@ -12,9 +12,8 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { ClothingItem } from '../types';
 
-export async function uploadItemImage(uri: string, userId: string): Promise<string> {
+export async function uploadItemImage(uri, userId) {
   const response = await fetch(uri);
   const blob = await response.blob();
   const filename = `closet/${userId}/${Date.now()}.jpg`;
@@ -23,16 +22,7 @@ export async function uploadItemImage(uri: string, userId: string): Promise<stri
   return getDownloadURL(storageRef);
 }
 
-export async function addClothingItem(data: {
-  userId: string;
-  name: string;
-  brand?: string;
-  category: ClothingItem['category'];
-  size?: string;
-  price?: number;
-  tags: string[];
-  imageURL: string;
-}) {
+export async function addClothingItem(data) {
   const docRef = await addDoc(collection(db, 'users', data.userId, 'closet'), {
     ...data,
     wornCount: 0,
@@ -42,25 +32,22 @@ export async function addClothingItem(data: {
   return docRef.id;
 }
 
-export async function getClosetItems(userId: string, category?: ClothingItem['category']) {
-  let q = query(
-    collection(db, 'users', userId, 'closet'),
-    orderBy('addedAt', 'desc')
-  );
-
+export async function getClosetItems(userId, category) {
+  let q;
   if (category) {
     q = query(
       collection(db, 'users', userId, 'closet'),
-      where('category', '==', category),
-      orderBy('addedAt', 'desc')
+      where('category', '==', category)
     );
+  } else {
+    q = query(collection(db, 'users', userId, 'closet'));
   }
-
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() })) as (ClothingItem & { id: string })[];
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return docs.sort((a, b) => (b.addedAt?.seconds ?? 0) - (a.addedAt?.seconds ?? 0));
 }
 
-export async function incrementWornCount(userId: string, itemId: string, price: number, currentWorn: number) {
+export async function incrementWornCount(userId, itemId, price, currentWorn) {
   const newWorn = currentWorn + 1;
   const costPerWear = price > 0 ? Math.round((price / newWorn) * 100) / 100 : 0;
   await updateDoc(doc(db, 'users', userId, 'closet', itemId), {
@@ -69,6 +56,6 @@ export async function incrementWornCount(userId: string, itemId: string, price: 
   });
 }
 
-export async function deleteClothingItem(userId: string, itemId: string) {
+export async function deleteClothingItem(userId, itemId) {
   await deleteDoc(doc(db, 'users', userId, 'closet', itemId));
 }
