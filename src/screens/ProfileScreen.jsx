@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { getUserProfile, logOut } from '../services/auth';
-import { getUserOutfits } from '../services/outfits';
+import { getUserOutfits, deleteOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
@@ -69,7 +69,7 @@ export default function ProfileScreen({ navigation }) {
 
             <View style={styles.statsRow}>
               {[
-                { value: profile?.outfitCount ?? 0, label: 'Outfits' },
+                { value: outfits.length, label: 'Outfits' },
                 { value: (profile?.avgRating ?? 0).toFixed(1), label: 'Avg Rating' },
                 { value: profile?.followers ?? 0, label: 'Followers' },
               ].map((stat, i) => (
@@ -91,8 +91,30 @@ export default function ProfileScreen({ navigation }) {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}>
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
+            onLongPress={() => {
+              Alert.alert('Delete Outfit', 'Remove this outfit permanently?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete', style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteOutfit(item.id, user.uid);
+                      setOutfits(prev => prev.filter(o => o.id !== item.id));
+                    } catch (err) {
+                      Alert.alert('Error', err.message || 'Could not delete. Try again.');
+                    }
+                  },
+                },
+              ]);
+            }}
+          >
             <Image source={{ uri: item.imageURL }} style={styles.gridImage} resizeMode="cover" />
+            <View style={styles.gridDeleteHint}>
+              <Text style={styles.gridDeleteHintText}>Hold to delete</Text>
+            </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
@@ -129,5 +151,7 @@ const styles = StyleSheet.create({
   tabUnderline: { height: 2, backgroundColor: COLORS.textPrimary, borderRadius: 1, marginTop: 4 },
   gridItem: { flex: 1, margin: 2, aspectRatio: 1 },
   gridImage: { width: '100%', height: '100%', borderRadius: BORDER_RADIUS.sm },
+  gridDeleteHint: { position: 'absolute', bottom: 4, left: 0, right: 0, alignItems: 'center' },
+  gridDeleteHintText: { fontSize: 9, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
   emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 40, fontSize: FONT_SIZE.md },
 });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
-import { rateOutfit, saveOutfit } from '../services/outfits';
+import { rateOutfit, saveOutfit, deleteOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
@@ -9,6 +9,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
   const { user } = useAuth();
   const [userRating, setUserRating] = useState(0);
   const [saved, setSaved] = useState(false);
+  const isOwner = user?.uid === outfit.userId;
 
   async function handleRate(value) {
     if (!user) return;
@@ -18,6 +19,27 @@ export default function OutfitDetailScreen({ route, navigation }) {
     } catch (err) {
       Alert.alert('Error', err.message);
     }
+  }
+
+  function handleDelete() {
+    Alert.alert(
+      'Delete Outfit',
+      'This will permanently remove this outfit. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteOutfit(outfit.id, user.uid);
+              navigation.goBack();
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Could not delete. Try again.');
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function handleSave() {
@@ -37,6 +59,12 @@ export default function OutfitDetailScreen({ route, navigation }) {
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
         <Text style={styles.backText}>‹</Text>
       </TouchableOpacity>
+
+      {isOwner && (
+        <TouchableOpacity style={styles.menuBtn} onPress={handleDelete}>
+          <Text style={styles.menuText}>🗑</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.starOverlay}>
         {[1, 2, 3, 4, 5].map(i => (
@@ -86,6 +114,8 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '65%' },
   backBtn: { position: 'absolute', top: 56, left: SPACING.md, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   backText: { color: COLORS.white, fontSize: 24, fontWeight: '300' },
+  menuBtn: { position: 'absolute', top: 56, right: SPACING.md, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
+  menuText: { fontSize: 16 },
   starOverlay: { position: 'absolute', right: SPACING.md, top: '25%', gap: SPACING.sm },
   starBtn: { width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   starIcon: { fontSize: 22, color: 'rgba(255,255,255,0.5)' },

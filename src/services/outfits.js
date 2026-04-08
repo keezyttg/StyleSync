@@ -3,6 +3,7 @@ import {
   addDoc,
   getDocs,
   doc,
+  deleteDoc,
   query,
   where,
   limit,
@@ -99,6 +100,17 @@ export async function rateOutfit(outfitId, userId, value) {
       avgRating: Math.round(newAvg * 10) / 10,
     });
   });
+}
+
+export async function deleteOutfit(outfitId, userId) {
+  if (!outfitId) throw new Error('Missing outfit ID');
+  await deleteDoc(doc(db, 'outfits', outfitId));
+  // Best-effort — don't block deletion if user doc update fails
+  try {
+    await updateDoc(doc(db, 'users', userId), { outfitCount: increment(-1) });
+  } catch {
+    // user doc may not exist for seeded/demo posts — ignore
+  }
 }
 
 export async function saveOutfit(userId, outfitId) {

@@ -14,7 +14,7 @@ export default function ClosetScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     setLoading(true);
     try {
       const data = await getClosetItems(user.uid, category === 'All' ? undefined : category);
@@ -25,22 +25,34 @@ export default function ClosetScreen({ navigation }) {
     setLoading(false);
   }, [user, category]);
 
+  // Computed stats from real data
+  const avgCPW = items.length
+    ? (items.reduce((sum, i) => sum + (i.costPerWear ?? i.price ?? 0), 0) / items.length).toFixed(2)
+    : '—';
+  const totalWears = items.reduce((sum, i) => sum + (i.wornCount ?? 0), 0);
+
   useEffect(() => { load(); }, [load]);
 
   function ItemCard({ item }) {
+    const cpw = item.wornCount > 0 && item.price > 0
+      ? `$${(item.price / item.wornCount).toFixed(2)}/wear`
+      : item.price > 0 ? `$${item.price.toFixed(2)} paid` : null;
+
     return (
       <TouchableOpacity style={styles.itemCard} activeOpacity={0.85}>
         <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
         <View style={styles.itemInfo}>
           <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.itemMeta}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
-          {item.tags?.length > 0 && (
-            <View style={styles.tagChip}>
-              <Text style={styles.tagText}>{item.tags[0]}</Text>
-            </View>
-          )}
+          <View style={styles.itemFooter}>
+            {cpw && (
+              <View style={styles.cpwBadge}>
+                <Text style={styles.cpwText}>{cpw}</Text>
+              </View>
+            )}
+            <Text style={styles.wornText}>Worn {item.wornCount ?? 0}×</Text>
+          </View>
         </View>
-        <Text style={styles.wornBadge}>Worn {item.wornCount}x</Text>
       </TouchableOpacity>
     );
   }
@@ -63,8 +75,8 @@ export default function ClosetScreen({ navigation }) {
       <View style={styles.statsRow}>
         {[
           { value: items.length, label: 'Pieces' },
-          { value: '4.2', label: 'Avg Rating' },
-          { value: '8', label: 'Outfits' },
+          { value: `$${avgCPW}`, label: 'Avg Cost/Wear' },
+          { value: totalWears, label: 'Total Wears' },
         ].map((stat, i) => (
           <View key={i} style={styles.statBox}>
             <Text style={styles.statValue}>{stat.value}</Text>
@@ -160,12 +172,13 @@ const styles = StyleSheet.create({
   sortText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '600' },
   itemCard: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
   itemImage: { width: 100, height: 100, backgroundColor: COLORS.surface },
-  itemInfo: { flex: 1, padding: SPACING.sm },
+  itemInfo: { flex: 1, padding: SPACING.sm, justifyContent: 'space-between' },
   itemName: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.textPrimary },
   itemMeta: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
-  tagChip: { marginTop: SPACING.xs, alignSelf: 'flex-start', backgroundColor: COLORS.textPrimary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.sm },
-  tagText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '600' },
-  wornBadge: { position: 'absolute', bottom: SPACING.sm, right: SPACING.sm, fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '500' },
+  itemFooter: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.sm },
+  cpwBadge: { backgroundColor: COLORS.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.sm },
+  cpwText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '700' },
+  wornText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '500' },
   emptyContainer: { alignItems: 'center', paddingTop: 60, paddingHorizontal: SPACING.xl, gap: SPACING.sm },
   emptyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.textPrimary },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20 },

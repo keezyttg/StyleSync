@@ -25,7 +25,17 @@ export default function LoginScreen() {
         await signUp(email.trim(), password, username.trim());
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      const msg = {
+        'auth/user-not-found': 'No account found with that email.',
+        'auth/wrong-password': 'Incorrect password. Try again.',
+        'auth/invalid-credential': 'Email or password is incorrect.',
+        'auth/email-already-in-use': 'An account with that email already exists.',
+        'auth/weak-password': 'Password must be at least 6 characters.',
+        'auth/invalid-email': 'Please enter a valid email address.',
+        'auth/network-request-failed': 'No internet connection. Check your network.',
+        'auth/too-many-requests': 'Too many attempts. Try again in a few minutes.',
+      }[err.code] || 'Something went wrong. Please try again.';
+      Alert.alert(tab === 'login' ? 'Log In Failed' : 'Sign Up Failed', msg);
     } finally {
       setLoading(false);
     }
