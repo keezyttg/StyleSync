@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { getClosetItems } from '../services/closet';
+import { getClosetItems, incrementWornCount } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { ClosetRowSkeleton } from '../components/SkeletonLoader';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
+const SORTS = ['Newest', 'Most Worn', 'Least Worn', 'Best CPW', 'Price: High', 'Price: Low'];
 
 export default function ClosetScreen({ navigation }) {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [category, setCategory] = useState('All');
+  const [sort, setSort] = useState('Newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -30,6 +33,33 @@ export default function ClosetScreen({ navigation }) {
     ? (items.reduce((sum, i) => sum + (i.costPerWear ?? i.price ?? 0), 0) / items.length).toFixed(2)
     : '—';
   const totalWears = items.reduce((sum, i) => sum + (i.wornCount ?? 0), 0);
+
+  function sortedItems() {
+    const arr = [...items];
+    switch (sort) {
+      case 'Most Worn': return arr.sort((a, b) => (b.wornCount ?? 0) - (a.wornCount ?? 0));
+      case 'Least Worn': return arr.sort((a, b) => (a.wornCount ?? 0) - (b.wornCount ?? 0));
+      case 'Best CPW': return arr.sort((a, b) => {
+        const cpwA = a.wornCount > 0 && a.price > 0 ? a.price / a.wornCount : Infinity;
+        const cpwB = b.wornCount > 0 && b.price > 0 ? b.price / b.wornCount : Infinity;
+        return cpwA - cpwB;
+      });
+      case 'Price: High': return arr.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+      case 'Price: Low': return arr.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+      default: return arr; // Newest — already sorted by addedAt desc
+    }
+  }
+
+  async function handleIncrementWorn(item) {
+    try {
+      await incrementWornCount(user.uid, item.id, item.price ?? 0, item.wornCount ?? 0);
+      setItems(prev => prev.map(i =>
+        i.id === item.id ? { ...i, wornCount: (i.wornCount ?? 0) + 1 } : i
+      ));
+    } catch (err) {
+      console.log('Worn count error:', err);
+    }
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -53,6 +83,10 @@ export default function ClosetScreen({ navigation }) {
             <Text style={styles.wornText}>Worn {item.wornCount ?? 0}×</Text>
           </View>
         </View>
+        <TouchableOpacity style={styles.wornBtn} onPress={() => handleIncrementWorn(item)}>
+          <Text style={styles.wornBtnText}>+</Text>
+          <Text style={styles.wornBtnLabel}>Wore</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   }
@@ -112,10 +146,25 @@ export default function ClosetScreen({ navigation }) {
 
       <View style={styles.listHeader}>
         <Text style={styles.pieceCount}>{items.length} pieces</Text>
-        <TouchableOpacity>
-          <Text style={styles.sortText}>Most Worn ▾</Text>
+        <TouchableOpacity onPress={() => setShowSortMenu(s => !s)}>
+          <Text style={styles.sortText}>{sort} ▾</Text>
         </TouchableOpacity>
       </View>
+
+      {showSortMenu && (
+        <View style={styles.sortMenu}>
+          {SORTS.map(s => (
+            <TouchableOpacity
+              key={s}
+              style={styles.sortOption}
+              onPress={() => { setSort(s); setShowSortMenu(false); }}
+            >
+              <Text style={[styles.sortOptionText, sort === s && styles.sortOptionActive]}>{s}</Text>
+              {sort === s && <Text style={styles.sortCheck}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {loading ? (
         <View style={{ paddingHorizontal: SPACING.md }}>
@@ -123,7 +172,7 @@ export default function ClosetScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={sortedItems()}
           keyExtractor={item => item.id}
           renderItem={({ item }) => <ItemCard item={item} />}
           contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
@@ -179,6 +228,14 @@ const styles = StyleSheet.create({
   cpwBadge: { backgroundColor: COLORS.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.sm },
   cpwText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '700' },
   wornText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '500' },
+  wornBtn: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderColor: COLORS.border },
+  wornBtnText: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.primary },
+  wornBtnLabel: { fontSize: 9, color: COLORS.textMuted, fontWeight: '600' },
+  sortMenu: { marginHorizontal: SPACING.md, marginBottom: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, overflow: 'hidden' },
+  sortOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border },
+  sortOptionText: { fontSize: FONT_SIZE.md, color: COLORS.textPrimary },
+  sortOptionActive: { color: COLORS.primary, fontWeight: '700' },
+  sortCheck: { fontSize: FONT_SIZE.md, color: COLORS.primary },
   emptyContainer: { alignItems: 'center', paddingTop: 60, paddingHorizontal: SPACING.xl, gap: SPACING.sm },
   emptyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.textPrimary },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20 },

@@ -4,20 +4,43 @@ import {
   StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { getCommunityOutfits } from '../services/outfits';
+import { joinCommunity, leaveCommunity, isJoined } from '../services/communities';
+import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export default function CommunityDetailScreen({ navigation, route }) {
   const { community } = route.params;
+  const { user } = useAuth();
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [joined, setJoined] = useState(false);
+  const [memberCount, setMemberCount] = useState(community.memberCount ?? 0);
 
   useEffect(() => {
     getCommunityOutfits(20)
       .then(data => setOutfits(data))
       .catch(() => setOutfits([]))
       .finally(() => setLoading(false));
+
+    if (user && community.id) {
+      isJoined(community.id, user.uid).then(setJoined).catch(() => {});
+    }
   }, []);
+
+  async function handleJoinToggle() {
+    if (!user || !community.id) return;
+    const wasJoined = joined;
+    setJoined(!wasJoined);
+    setMemberCount(c => wasJoined ? c - 1 : c + 1);
+    try {
+      wasJoined
+        ? await leaveCommunity(community.id, user.uid)
+        : await joinCommunity(community.id, user.uid);
+    } catch {
+      setJoined(wasJoined);
+      setMemberCount(c => wasJoined ? c + 1 : c - 1);
+    }
+  }
 
   function StarRow({ rating }) {
     return (
@@ -53,9 +76,19 @@ export default function CommunityDetailScreen({ navigation, route }) {
               <Text style={styles.communityName}>{community.name}</Text>
               <Text style={styles.communityDesc}>{community.description}</Text>
 
+              {community.labels?.length > 0 && (
+                <View style={styles.labelsRow}>
+                  {community.labels.map(l => (
+                    <View key={l} style={styles.labelChip}>
+                      <Text style={styles.labelText}>{l}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{community.memberCount ?? '—'}</Text>
+                  <Text style={styles.statValue}>{memberCount || '—'}</Text>
                   <Text style={styles.statLabel}>Members</Text>
                 </View>
                 <View style={styles.statDivider} />
@@ -67,7 +100,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
 
               <TouchableOpacity
                 style={[styles.joinBtn, joined && styles.joinBtnJoined]}
-                onPress={() => setJoined(j => !j)}
+                onPress={handleJoinToggle}
               >
                 <Text style={[styles.joinBtnText, joined && styles.joinBtnTextJoined]}>
                   {joined ? 'Joined ✓' : 'Join Community'}
@@ -110,7 +143,10 @@ const styles = StyleSheet.create({
   communityAvatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
   communityAvatarText: { fontSize: 36, color: COLORS.white, fontWeight: '800' },
   communityName: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center' },
-  communityDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.lg },
+  communityDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.sm },
+  labelsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
+  labelChip: { backgroundColor: COLORS.surface, paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border },
+  labelText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '600' },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.lg },
   statItem: { alignItems: 'center', paddingHorizontal: SPACING.xl },
   statDivider: { width: 1, height: 32, backgroundColor: COLORS.border },

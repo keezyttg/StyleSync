@@ -21,6 +21,20 @@ export default function AddItemScreen({ navigation }) {
   const [brand, setBrand] = useState('');
   const [price, setPrice] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
+  const [currency, setCurrency] = useState('$');
+
+  // Auto-suggest tags when name or brand changes
+  function autoSuggestTags(text) {
+    const lower = text.toLowerCase();
+    const suggestions = [];
+    if (/(tee|shirt|hoodie|sweat|top|blouse|tank|crop)/i.test(lower)) suggestions.push('Casual');
+    if (/(suit|blazer|dress|formal|tie)/i.test(lower)) suggestions.push('Formal');
+    if (/(nike|adidas|jordan|yeezy|supreme|off.white|palace)/i.test(lower)) suggestions.push('Streetwear');
+    if (/(vintage|thrift|retro|90s|80s|y2k)/i.test(lower)) suggestions.push('Vintage');
+    if (/(lulu|gym|sport|yoga|run|active|athlet)/i.test(lower)) suggestions.push('Athleisure');
+    if (/(zara|h&m|uniqlo|basic|simple|minimal)/i.test(lower)) suggestions.push('Minimalist');
+    setSelectedTags(prev => [...new Set([...prev, ...suggestions])]);
+  }
   const [loading, setLoading] = useState(false);
 
   async function pickImage() {
@@ -120,7 +134,7 @@ export default function AddItemScreen({ navigation }) {
           placeholder="e.g. Black Slim Fit Jeans"
           placeholderTextColor={COLORS.textMuted}
           value={name}
-          onChangeText={setName}
+          onChangeText={t => { setName(t); autoSuggestTags(t); }}
           maxLength={60}
         />
 
@@ -145,7 +159,7 @@ export default function AddItemScreen({ navigation }) {
           placeholder="e.g. Nike, Zara, Thrift"
           placeholderTextColor={COLORS.textMuted}
           value={brand}
-          onChangeText={setBrand}
+          onChangeText={t => { setBrand(t); autoSuggestTags(t); }}
           maxLength={40}
         />
 
@@ -166,10 +180,21 @@ export default function AddItemScreen({ navigation }) {
         </ScrollView>
 
         {/* Price */}
-        <Text style={styles.label}>Price Paid ($)</Text>
+        <Text style={styles.label}>Price Paid</Text>
+        <View style={styles.priceRow}>
+          {['$', '£', '€', '¥', '₩'].map(c => (
+            <TouchableOpacity
+              key={c}
+              style={[styles.currencyBtn, currency === c && styles.currencyBtnActive]}
+              onPress={() => setCurrency(c)}
+            >
+              <Text style={[styles.currencyText, currency === c && styles.currencyTextActive]}>{c}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
         <TextInput
           style={styles.input}
-          placeholder="0.00"
+          placeholder={`${currency}0.00`}
           placeholderTextColor={COLORS.textMuted}
           value={price}
           onChangeText={setPrice}
@@ -223,4 +248,9 @@ const styles = StyleSheet.create({
   chipText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '500' },
   chipTextActive: { color: COLORS.white, fontWeight: '700' },
   sizeScroll: { marginBottom: SPACING.xs },
+  priceRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
+  currencyBtn: { width: 40, height: 40, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center' },
+  currencyBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  currencyText: { fontSize: FONT_SIZE.md, color: COLORS.textPrimary, fontWeight: '600' },
+  currencyTextActive: { color: COLORS.white, fontWeight: '700' },
 });

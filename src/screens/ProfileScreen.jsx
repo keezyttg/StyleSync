@@ -11,6 +11,7 @@ export default function ProfileScreen({ navigation }) {
   const [outfits, setOutfits] = useState([]);
   const [tab, setTab] = useState('My Outfits');
   const [loading, setLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -26,6 +27,11 @@ export default function ProfileScreen({ navigation }) {
       }
     })();
   }, [user]);
+
+  // Recompute avg rating from actual outfit data
+  const avgRating = outfits.length > 0
+    ? (outfits.reduce((sum, o) => sum + (o.avgRating ?? 0), 0) / outfits.length).toFixed(1)
+    : '—';
 
   function handleSignOut() {
     Alert.alert('Sign Out', 'Are you sure?', [
@@ -46,13 +52,50 @@ export default function ProfileScreen({ navigation }) {
         numColumns={2}
         ListHeaderComponent={
           <View>
+            {/* Header */}
             <View style={styles.profileHeader}>
               <Text style={styles.pageTitle}>Profile</Text>
-              <TouchableOpacity onPress={handleSignOut}>
-                <Text style={styles.signOutText}>Sign Out</Text>
-              </TouchableOpacity>
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={() => navigation.navigate('EditProfile', { profile })}
+                >
+                  <Text style={styles.editBtnText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.settingsBtn}
+                  onPress={() => setShowSettings(s => !s)}
+                >
+                  <Text style={styles.settingsIcon}>⚙</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
+            {/* Settings panel */}
+            {showSettings && (
+              <View style={styles.settingsPanel}>
+                <TouchableOpacity style={styles.settingsRow} onPress={() => navigation.navigate('EditProfile', { profile })}>
+                  <Text style={styles.settingsRowText}>Edit Profile</Text>
+                  <Text style={styles.settingsChevron}>›</Text>
+                </TouchableOpacity>
+                <View style={styles.settingsDivider} />
+                <TouchableOpacity style={styles.settingsRow}>
+                  <Text style={styles.settingsRowText}>Notifications</Text>
+                  <Text style={styles.settingsChevron}>›</Text>
+                </TouchableOpacity>
+                <View style={styles.settingsDivider} />
+                <TouchableOpacity style={styles.settingsRow}>
+                  <Text style={styles.settingsRowText}>Privacy</Text>
+                  <Text style={styles.settingsChevron}>›</Text>
+                </TouchableOpacity>
+                <View style={styles.settingsDivider} />
+                <TouchableOpacity style={styles.settingsRow} onPress={handleSignOut}>
+                  <Text style={[styles.settingsRowText, { color: COLORS.error }]}>Sign Out</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Avatar + name */}
             <View style={styles.avatarSection}>
               {profile?.photoURL ? (
                 <Image source={{ uri: profile.photoURL }} style={styles.avatar} />
@@ -65,12 +108,14 @@ export default function ProfileScreen({ navigation }) {
               )}
               <Text style={styles.displayName}>{profile?.displayName ?? 'User'}</Text>
               <Text style={styles.username}>@{profile?.username ?? 'user'}</Text>
+              {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
             </View>
 
+            {/* Stats */}
             <View style={styles.statsRow}>
               {[
                 { value: outfits.length, label: 'Outfits' },
-                { value: (profile?.avgRating ?? 0).toFixed(1), label: 'Avg Rating' },
+                { value: avgRating, label: 'Avg Rating' },
                 { value: profile?.followers ?? 0, label: 'Followers' },
               ].map((stat, i) => (
                 <View key={i} style={styles.statBox}>
@@ -80,6 +125,7 @@ export default function ProfileScreen({ navigation }) {
               ))}
             </View>
 
+            {/* Tabs */}
             <View style={styles.tabRow}>
               {['My Outfits', 'Saved'].map(t => (
                 <TouchableOpacity key={t} style={styles.tabBtn} onPress={() => setTab(t)}>
@@ -104,7 +150,7 @@ export default function ProfileScreen({ navigation }) {
                       await deleteOutfit(item.id, user.uid);
                       setOutfits(prev => prev.filter(o => o.id !== item.id));
                     } catch (err) {
-                      Alert.alert('Error', err.message || 'Could not delete. Try again.');
+                      Alert.alert('Error', err.message || 'Could not delete.');
                     }
                   },
                 },
@@ -132,14 +178,24 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.white },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   profileHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.md },
-  pageTitle: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.textPrimary },
-  signOutText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '600' },
+  pageTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.textPrimary },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  editBtn: { borderWidth: 1, borderColor: COLORS.border, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 6 },
+  editBtnText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '600' },
+  settingsBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
+  settingsIcon: { fontSize: 20, color: COLORS.textSecondary },
+  settingsPanel: { marginHorizontal: SPACING.md, marginBottom: SPACING.md, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  settingsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 14 },
+  settingsRowText: { fontSize: FONT_SIZE.md, color: COLORS.textPrimary },
+  settingsChevron: { fontSize: 20, color: COLORS.textMuted },
+  settingsDivider: { height: 1, backgroundColor: COLORS.border },
   avatarSection: { alignItems: 'center', paddingBottom: SPACING.lg },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: SPACING.sm },
   avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
   avatarInitial: { fontSize: 40, color: COLORS.white, fontWeight: '700' },
   displayName: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.textPrimary },
-  username: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginTop: 4 },
+  username: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginTop: 2 },
+  bio: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: 'center', paddingHorizontal: SPACING.xl },
   statsRow: { flexDirection: 'row', paddingHorizontal: SPACING.md, marginBottom: SPACING.lg, gap: SPACING.sm },
   statBox: { flex: 1, backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.md, paddingVertical: SPACING.md, alignItems: 'center' },
   statValue: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.textPrimary },

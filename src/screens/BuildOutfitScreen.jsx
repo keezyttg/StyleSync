@@ -4,19 +4,26 @@ import { getClosetItems } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
+const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
+
 export default function BuildOutfitScreen({ navigation }) {
   const { user } = useAuth();
-  const [items, setItems] = useState([]);
+  const [allItems, setAllItems] = useState([]);
+  const [category, setCategory] = useState('All');
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     getClosetItems(user.uid).then(data => {
-      setItems(data);
+      setAllItems(data);
       setLoading(false);
     });
   }, [user]);
+
+  const items = category === 'All'
+    ? allItems
+    : allItems.filter(i => i.category === category);
 
   function toggleItem(id) {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -24,7 +31,7 @@ export default function BuildOutfitScreen({ navigation }) {
 
   function handleNext() {
     if (selected.length === 0) { Alert.alert('Select at least one item'); return; }
-    const selectedItems = items.filter(i => selected.includes(i.id));
+    const selectedItems = allItems.filter(i => selected.includes(i.id));
     navigation.navigate('Post', { preselectedItems: selectedItems });
   }
 
@@ -36,15 +43,38 @@ export default function BuildOutfitScreen({ navigation }) {
         </TouchableOpacity>
         <Text style={styles.title}>Build an Outfit</Text>
         <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-          <Text style={styles.nextBtnText}>Next</Text>
+          <Text style={styles.nextBtnText}>
+            Next {selected.length > 0 ? `(${selected.length})` : ''}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.subtitle}>Select pieces from your closet to build an outfit</Text>
+      {/* Category filter chips */}
+      <FlatList
+        data={CATEGORIES}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={c => c}
+        contentContainerStyle={styles.catRow}
+        style={{ flexGrow: 0, flexShrink: 0, marginBottom: SPACING.sm }}
+        renderItem={({ item: cat }) => (
+          <TouchableOpacity
+            style={[styles.catChip, category === cat && styles.catChipActive]}
+            onPress={() => setCategory(cat)}
+          >
+            <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
+          </TouchableOpacity>
+        )}
+      />
 
       {selected.length > 0 && (
         <View style={styles.selectedBar}>
-          <Text style={styles.selectedText}>{selected.length} item{selected.length !== 1 ? 's' : ''} selected</Text>
+          <Text style={styles.selectedText}>
+            {selected.length} item{selected.length !== 1 ? 's' : ''} selected
+          </Text>
+          <TouchableOpacity onPress={() => setSelected([])}>
+            <Text style={styles.clearText}>Clear</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -52,9 +82,11 @@ export default function BuildOutfitScreen({ navigation }) {
         <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
       ) : items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Your closet is empty.</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('Closet')}>
-            <Text style={styles.addBtnText}>Add Items to Closet</Text>
+          <Text style={styles.emptyText}>
+            {category === 'All' ? 'Your closet is empty.' : `No ${category} in your closet.`}
+          </Text>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddItem')}>
+            <Text style={styles.addBtnText}>Add Items</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -66,7 +98,11 @@ export default function BuildOutfitScreen({ navigation }) {
           renderItem={({ item }) => {
             const isSelected = selected.includes(item.id);
             return (
-              <TouchableOpacity style={[styles.card, isSelected && styles.cardSelected]} onPress={() => toggleItem(item.id)} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={[styles.card, isSelected && styles.cardSelected]}
+                onPress={() => toggleItem(item.id)}
+                activeOpacity={0.8}
+              >
                 <Image source={{ uri: item.imageURL }} style={styles.image} resizeMode="cover" />
                 {isSelected && (
                   <View style={styles.checkBadge}>
@@ -75,7 +111,7 @@ export default function BuildOutfitScreen({ navigation }) {
                 )}
                 <View style={styles.cardInfo}>
                   <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.itemMeta}>{item.category}</Text>
+                  <Text style={styles.itemMeta}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -93,9 +129,14 @@ const styles = StyleSheet.create({
   title: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.textPrimary },
   nextBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: BORDER_RADIUS.full },
   nextBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
-  subtitle: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
-  selectedBar: { backgroundColor: COLORS.primary, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, marginHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md, marginBottom: SPACING.sm },
+  catRow: { paddingHorizontal: SPACING.md, gap: SPACING.sm, alignItems: 'center' },
+  catChip: { paddingHorizontal: SPACING.md, paddingVertical: 7, height: 34, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center' },
+  catChipActive: { backgroundColor: COLORS.textPrimary, borderColor: COLORS.textPrimary },
+  catText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '500' },
+  catTextActive: { color: COLORS.white, fontWeight: '700' },
+  selectedBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, marginHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md, marginBottom: SPACING.sm },
   selectedText: { color: COLORS.white, fontWeight: '600', fontSize: FONT_SIZE.sm },
+  clearText: { color: 'rgba(255,255,255,0.8)', fontSize: FONT_SIZE.sm, fontWeight: '600' },
   grid: { paddingHorizontal: SPACING.sm, paddingBottom: 100 },
   card: { flex: 1, margin: SPACING.xs, borderRadius: BORDER_RADIUS.md, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', backgroundColor: COLORS.surface },
   cardSelected: { borderColor: COLORS.primary },
