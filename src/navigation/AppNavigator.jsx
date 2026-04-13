@@ -18,6 +18,7 @@ import CommunityDetailScreen from '../screens/CommunityDetailScreen';
 import CreateCommunityScreen from '../screens/CreateCommunityScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import CameraScreen from '../screens/CameraScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 
 import { COLORS } from '../constants/theme';
 
@@ -121,6 +122,7 @@ function AppStack() {
       <Stack.Screen name="Camera" component={CameraScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="CreateCommunity" component={CreateCommunityScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="UserProfile" component={UserProfileScreen} />
     </Stack.Navigator>
   );
 }

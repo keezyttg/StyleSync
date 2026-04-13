@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, Image,
 } from 'react-native';
 import { getCommunities, searchCommunities } from '../services/communities';
 import { searchUsers, followUser, unfollowUser, getFollowing } from '../services/auth';
@@ -236,26 +236,35 @@ export default function DiscoverScreen({ navigation }) {
               contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
               renderItem={({ item }) => {
                 const isFollowing = following.has(item.id);
+                const displayName = item.displayName || item.username || '?';
                 return (
-                  <View style={styles.personRow}>
-                    <View style={styles.personAvatar}>
-                      <Text style={styles.personAvatarText}>
-                        {(item.displayName || item.username || '?')[0].toUpperCase()}
-                      </Text>
-                    </View>
+                  <TouchableOpacity
+                    style={styles.personRow}
+                    onPress={() => navigation.navigate('UserProfile', { userId: item.id, username: item.username })}
+                    activeOpacity={0.7}
+                  >
+                    {item.photoURL ? (
+                      <Image source={{ uri: item.photoURL }} style={styles.personAvatarImage} />
+                    ) : (
+                      <View style={styles.personAvatar}>
+                        <Text style={styles.personAvatarText}>
+                          {displayName[0].toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.personInfo}>
-                      <Text style={styles.personName}>{item.displayName || item.username}</Text>
+                      <Text style={styles.personName}>{displayName}</Text>
                       <Text style={styles.personUsername}>@{item.username}</Text>
                     </View>
                     <TouchableOpacity
                       style={[styles.followBtn, isFollowing && styles.followBtnActive]}
-                      onPress={() => handleFollow(item.id)}
+                      onPress={(e) => { e.stopPropagation(); handleFollow(item.id); }}
                     >
                       <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
                         {isFollowing ? 'Following' : 'Follow'}
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 );
               }}
             />
@@ -305,6 +314,7 @@ const styles = StyleSheet.create({
   memberCount: { fontSize: FONT_SIZE.xs, color: COLORS.textMuted, fontWeight: '500' },
   emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 60 },
   personRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACING.md, borderBottomWidth: 1, borderColor: COLORS.border, gap: SPACING.md },
+  personAvatarImage: { width: 48, height: 48, borderRadius: 24, flexShrink: 0 },
   personAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   personAvatarText: { color: COLORS.white, fontWeight: '800', fontSize: FONT_SIZE.lg },
   personInfo: { flex: 1 },

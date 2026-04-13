@@ -48,7 +48,16 @@ export default function PostScreen({ navigation, route }) {
         imageURL: i.imageURL,
         brand: i.brand ?? '',
       }));
-      await createOutfit({ userId: user.uid, imageURL, caption, tags: selectedTags, itemIds: items.map(i => i.id), items });
+      await createOutfit({
+        userId: user.uid,
+        username: user.displayName ?? '',
+        userPhotoURL: user.photoURL ?? null,
+        imageURL,
+        caption,
+        tags: selectedTags,
+        itemIds: items.map(i => i.id),
+        items,
+      });
       setImageUri(null);
       setCaption('');
       setSelectedTags([]);

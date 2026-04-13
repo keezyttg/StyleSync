@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTrendingOutfits, getCommunityOutfits } from '../services/outfits';
-import { getFollowing, followUser, unfollowUser } from '../services/auth';
+import { getFollowing, followUser, unfollowUser, getUserProfile } from '../services/auth';
 import { getUserCommunities } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
 import { FeedCardSkeleton } from '../components/SkeletonLoader';
@@ -48,7 +48,23 @@ export default function FeedScreen({ navigation }) {
     setError(null);
     try {
       const data = tab === 'Trending' ? await getTrendingOutfits() : await getCommunityOutfits();
-      setOutfits(data);
+
+      // For any outfit missing username/photo, look up the poster's profile
+      const missingIds = [...new Set(
+        data.filter(o => !o.username && o.userId).map(o => o.userId)
+      )];
+      if (missingIds.length > 0) {
+        const profiles = await Promise.all(missingIds.map(id => getUserProfile(id).catch(() => null)));
+        const profileMap = {};
+        missingIds.forEach((id, i) => { if (profiles[i]) profileMap[id] = profiles[i]; });
+        setOutfits(data.map(o => {
+          if (o.username || !o.userId || !profileMap[o.userId]) return o;
+          const p = profileMap[o.userId];
+          return { ...o, username: p.displayName || p.username, userPhotoURL: p.photoURL ?? null };
+        }));
+      } else {
+        setOutfits(data);
+      }
     } catch (err) {
       console.log('Feed load error:', err);
       setError('Could not load outfits. Check your connection.');
@@ -124,14 +140,19 @@ export default function FeedScreen({ navigation }) {
       >
         <View style={styles.cardHeader}>
           <TouchableOpacity
-            style={styles.avatarCircle}
-            onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
+            onPress={() => item.userId && navigation.navigate('UserProfile', { userId: item.userId, username: item.username || item.displayName })}
           >
-            <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
+            {item.userPhotoURL ? (
+              <Image source={{ uri: item.userPhotoURL }} style={styles.avatarCircle} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerInfo}
-            onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
+            onPress={() => item.userId && navigation.navigate('UserProfile', { userId: item.userId, username: item.username || item.displayName })}
           >
             <Text style={styles.username}>{displayName}</Text>
             {item.tags?.[0] && <Text style={styles.tagLine}>{item.tags[0]}</Text>}
