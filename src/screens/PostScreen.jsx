@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadOutfitImage, createOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
@@ -10,6 +10,7 @@ const STYLE_TAGS = ['Streetwear', 'Fall', 'Casual', 'Formal', 'Minimalist', 'Vin
 export default function PostScreen({ navigation, route }) {
   const { user } = useAuth();
   const [imageUri, setImageUri] = useState(route.params?.imageUri ?? null);
+  const preselectedItems = route.params?.preselectedItems ?? [];
   const [caption, setCaption] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,14 @@ export default function PostScreen({ navigation, route }) {
     setUploadError(null);
     try {
       const imageURL = await uploadOutfitImage(imageUri, user.uid);
-      await createOutfit({ userId: user.uid, imageURL, caption, tags: selectedTags, itemIds: [] });
+      const items = preselectedItems.map(i => ({
+        id: i.id,
+        name: i.name,
+        category: i.category,
+        imageURL: i.imageURL,
+        brand: i.brand ?? '',
+      }));
+      await createOutfit({ userId: user.uid, imageURL, caption, tags: selectedTags, itemIds: items.map(i => i.id), items });
       setImageUri(null);
       setCaption('');
       setSelectedTags([]);
@@ -85,6 +93,27 @@ export default function PostScreen({ navigation, route }) {
             )}
             <TextInput style={styles.captionInput} placeholder="Add a Caption..." placeholderTextColor={COLORS.textMuted} value={caption} onChangeText={setCaption} multiline maxLength={150} />
             <Text style={styles.charCount}>{caption.length}/150</Text>
+
+            {preselectedItems.length > 0 && (
+              <View>
+                <Text style={styles.sectionLabel}>Items in this outfit</Text>
+                <FlatList
+                  data={preselectedItems}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={item => item.id}
+                  style={{ marginBottom: SPACING.md }}
+                  renderItem={({ item }) => (
+                    <View style={styles.itemThumb}>
+                      <Image source={{ uri: item.imageURL }} style={styles.itemThumbImg} resizeMode="cover" />
+                      <Text style={styles.itemThumbName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.itemThumbCat}>{item.category}</Text>
+                    </View>
+                  )}
+                />
+              </View>
+            )}
+
             <Text style={styles.sectionLabel}>Style Tags</Text>
             <View style={styles.tagsRow}>
               {STYLE_TAGS.map(tag => (
@@ -142,4 +171,8 @@ const styles = StyleSheet.create({
   errorBannerText: { flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.error, lineHeight: 18 },
   retryInlineBtn: { marginLeft: SPACING.sm, paddingHorizontal: SPACING.sm, paddingVertical: 6, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, borderColor: COLORS.error },
   retryInlineText: { fontSize: FONT_SIZE.sm, color: COLORS.error, fontWeight: '700' },
+  itemThumb: { width: 80, marginRight: SPACING.sm },
+  itemThumbImg: { width: 80, height: 80, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.surface },
+  itemThumbName: { fontSize: FONT_SIZE.xs, fontWeight: '600', color: COLORS.textPrimary, marginTop: 4 },
+  itemThumbCat: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
 });
