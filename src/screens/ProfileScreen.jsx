@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { getUserProfile, logOut } from '../services/auth';
 import { getUserOutfits, deleteOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
@@ -13,20 +14,19 @@ export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
 
-  useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    (async () => {
-      try {
-        const [prof, outs] = await Promise.all([getUserProfile(user.uid), getUserOutfits(user.uid)]);
-        setProfile(prof);
-        setOutfits(outs);
-      } catch (err) {
-        console.log('Profile load error:', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) { setLoading(false); return; }
+      setLoading(true);
+      Promise.all([getUserProfile(user.uid), getUserOutfits(user.uid)])
+        .then(([prof, outs]) => {
+          setProfile(prof);
+          setOutfits(outs);
+        })
+        .catch(err => console.log('Profile load error:', err))
+        .finally(() => setLoading(false));
+    }, [user])
+  );
 
   // Recompute avg rating from actual outfit data
   const avgRating = outfits.length > 0
@@ -74,16 +74,6 @@ export default function ProfileScreen({ navigation }) {
             {/* Settings panel */}
             {showSettings && (
               <View style={styles.settingsPanel}>
-                <TouchableOpacity style={styles.settingsRow} onPress={() => navigation.navigate('EditProfile', { profile })}>
-                  <Text style={styles.settingsRowText}>Edit Profile</Text>
-                  <Text style={styles.settingsChevron}>›</Text>
-                </TouchableOpacity>
-                <View style={styles.settingsDivider} />
-                <TouchableOpacity style={styles.settingsRow}>
-                  <Text style={styles.settingsRowText}>Notifications</Text>
-                  <Text style={styles.settingsChevron}>›</Text>
-                </TouchableOpacity>
-                <View style={styles.settingsDivider} />
                 <TouchableOpacity style={styles.settingsRow}>
                   <Text style={styles.settingsRowText}>Privacy</Text>
                   <Text style={styles.settingsChevron}>›</Text>

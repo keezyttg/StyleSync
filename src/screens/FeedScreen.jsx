@@ -221,7 +221,7 @@ export default function FeedScreen({ navigation }) {
         <FlatList
           data={filteredOutfits}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <OutfitCard item={item} />
+          renderItem={({ item }) => <OutfitCard item={item} />}
           contentContainerStyle={{ gap: 1 }}
           snapToInterval={screenWidth * 1.25 + CARD_CHROME}
           decelerationRate="fast"

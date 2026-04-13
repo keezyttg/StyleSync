@@ -5,7 +5,7 @@ import {
   sendPasswordResetEmail,
   updateProfile,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocFromServer, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from './firebase';
 
@@ -52,7 +52,7 @@ export async function resetPassword(email) {
 }
 
 export async function getUserProfile(uid) {
-  const snap = await getDoc(doc(db, 'users', uid));
+  const snap = await getDocFromServer(doc(db, 'users', uid));
   return snap.exists() ? snap.data() : null;
 }
 

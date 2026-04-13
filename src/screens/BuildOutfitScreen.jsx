@@ -4,12 +4,14 @@ import { getClosetItems } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
-const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
+const CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
+const SORT_OPTIONS = ['Newest', 'Most Worn', 'Least Worn', 'Oldest'];
 
 export default function BuildOutfitScreen({ navigation }) {
   const { user } = useAuth();
   const [allItems, setAllItems] = useState([]);
-  const [category, setCategory] = useState('All');
+  const [category, setCategory] = useState('Tops');
+  const [sort, setSort] = useState('Newest');
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,9 +23,15 @@ export default function BuildOutfitScreen({ navigation }) {
     });
   }, [user]);
 
-  const items = category === 'All'
-    ? allItems
-    : allItems.filter(i => i.category === category);
+  const items = (() => {
+    const filtered = allItems.filter(i => i.category === category);
+    switch (sort) {
+      case 'Most Worn':  return [...filtered].sort((a, b) => (b.wornCount ?? 0) - (a.wornCount ?? 0));
+      case 'Least Worn': return [...filtered].sort((a, b) => (a.wornCount ?? 0) - (b.wornCount ?? 0));
+      case 'Oldest':     return [...filtered].sort((a, b) => (a.addedAt?.seconds ?? 0) - (b.addedAt?.seconds ?? 0));
+      default:           return [...filtered].sort((a, b) => (b.addedAt?.seconds ?? 0) - (a.addedAt?.seconds ?? 0));
+    }
+  })();
 
   function toggleItem(id) {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -49,20 +57,38 @@ export default function BuildOutfitScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Category filter chips */}
+      {/* Category chips */}
       <FlatList
         data={CATEGORIES}
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={c => c}
         contentContainerStyle={styles.catRow}
-        style={{ flexGrow: 0, flexShrink: 0, marginBottom: SPACING.sm }}
+        style={{ flexGrow: 0, flexShrink: 0 }}
         renderItem={({ item: cat }) => (
           <TouchableOpacity
             style={[styles.catChip, category === cat && styles.catChipActive]}
             onPress={() => setCategory(cat)}
           >
             <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
+          </TouchableOpacity>
+        )}
+      />
+
+      {/* Sort chips */}
+      <FlatList
+        data={SORT_OPTIONS}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={s => s}
+        contentContainerStyle={styles.sortRow}
+        style={{ flexGrow: 0, flexShrink: 0, marginBottom: SPACING.sm }}
+        renderItem={({ item: s }) => (
+          <TouchableOpacity
+            style={[styles.sortChip, sort === s && styles.sortChipActive]}
+            onPress={() => setSort(s)}
+          >
+            <Text style={[styles.sortText, sort === s && styles.sortTextActive]}>{s}</Text>
           </TouchableOpacity>
         )}
       />
@@ -82,9 +108,7 @@ export default function BuildOutfitScreen({ navigation }) {
         <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
       ) : items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            {category === 'All' ? 'Your closet is empty.' : `No ${category} in your closet.`}
-          </Text>
+          <Text style={styles.emptyText}>No {category} in your closet.</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddItem')}>
             <Text style={styles.addBtnText}>Add Items</Text>
           </TouchableOpacity>
@@ -129,11 +153,16 @@ const styles = StyleSheet.create({
   title: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.textPrimary },
   nextBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: BORDER_RADIUS.full },
   nextBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
-  catRow: { paddingHorizontal: SPACING.md, gap: SPACING.sm, alignItems: 'center' },
+  catRow: { paddingHorizontal: SPACING.md, gap: SPACING.sm, alignItems: 'center', paddingBottom: SPACING.sm },
   catChip: { paddingHorizontal: SPACING.md, paddingVertical: 7, height: 34, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center' },
   catChipActive: { backgroundColor: COLORS.textPrimary, borderColor: COLORS.textPrimary },
   catText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '500' },
   catTextActive: { color: COLORS.white, fontWeight: '700' },
+  sortRow: { paddingHorizontal: SPACING.md, gap: SPACING.sm, alignItems: 'center', paddingBottom: SPACING.sm },
+  sortChip: { paddingHorizontal: SPACING.md, paddingVertical: 5, height: 30, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface, justifyContent: 'center' },
+  sortChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  sortText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '500' },
+  sortTextActive: { color: COLORS.white, fontWeight: '700' },
   selectedBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, marginHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md, marginBottom: SPACING.sm },
   selectedText: { color: COLORS.white, fontWeight: '600', fontSize: FONT_SIZE.sm },
   clearText: { color: 'rgba(255,255,255,0.8)', fontSize: FONT_SIZE.sm, fontWeight: '600' },

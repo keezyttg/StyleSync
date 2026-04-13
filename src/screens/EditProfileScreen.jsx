@@ -48,8 +48,9 @@ export default function EditProfileScreen({ navigation, route }) {
         updates.photoURL = photoURL;
       }
       await updateUserProfile(user.uid, updates);
-      Alert.alert('Saved!', 'Your profile has been updated.');
-      navigation.goBack();
+      Alert.alert('Saved!', 'Your profile has been updated.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not save changes.');
     } finally {
