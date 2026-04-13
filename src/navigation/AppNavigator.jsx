@@ -24,16 +24,16 @@ import { COLORS } from '../constants/theme';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function TabBarIcon({ icon, label, focused }) {
+function TabBarIcon({ icon, focused }) {
   return (
     <View style={tabStyles.iconContainer}>
       <Text style={[tabStyles.icon, focused && tabStyles.iconFocused]}>{icon}</Text>
-      <Text style={[tabStyles.label, focused && tabStyles.labelFocused]}>{label}</Text>
     </View>
   );
 }
 
-function CenterPostButton({ onPress }) {
+
+function CenterFeedButton({ onPress }) {
   return (
     <TouchableOpacity style={tabStyles.centerBtn} onPress={onPress} activeOpacity={0.85}>
       <View style={tabStyles.centerBtnInner}>
@@ -53,25 +53,33 @@ function MainTabs({ navigation }) {
       }}
     >
       <Tab.Screen
-        name="Feed"
+        name="CameraTab"
         component={FeedScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="🏠" label="Feed" focused={focused} />,
+          tabBarButton: () => (
+            <TouchableOpacity
+              style={tabStyles.regularTabBtn}
+              onPress={() => navigation.navigate('Camera')}
+              activeOpacity={0.7}
+            >
+              <TabBarIcon icon="📷" focused={false} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <Tab.Screen
         name="Closet"
         component={ClosetScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="👗" label="Closet" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabBarIcon icon="👗" focused={focused} />,
         }}
       />
       <Tab.Screen
-        name="Post"
-        component={PostScreen}
+        name="Feed"
+        component={FeedScreen}
         options={{
-          tabBarButton: () => (
-            <CenterPostButton onPress={() => navigation.navigate('Camera')} />
+          tabBarButton: (props) => (
+            <CenterFeedButton onPress={props.onPress} />
           ),
         }}
       />
@@ -79,14 +87,14 @@ function MainTabs({ navigation }) {
         name="Discover"
         component={DiscoverScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="🔍" label="Discover" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabBarIcon icon="🔍" focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="👤" label="Profile" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabBarIcon icon="👤" focused={focused} />,
         }}
       />
     </Tab.Navigator>
@@ -139,10 +147,9 @@ const tabStyles = StyleSheet.create({
     paddingTop: 8,
   },
   iconContainer: { alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 22, color: COLORS.textMuted },
+  icon: { fontSize: 26, color: COLORS.textMuted },
   iconFocused: { color: COLORS.primary },
-  label: { fontSize: 10, color: COLORS.textMuted, marginTop: 2 },
-  labelFocused: { color: COLORS.primary, fontWeight: '600' },
+  regularTabBtn: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   centerBtn: { top: -20, justifyContent: 'center', alignItems: 'center' },
   centerBtnInner: {
     width: 60,

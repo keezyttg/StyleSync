@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, Image, TouchableOpacity,
-  StyleSheet, RefreshControl,
+  StyleSheet, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { getTrendingOutfits, getCommunityOutfits } from '../services/outfits';
 import { getFollowing, followUser, unfollowUser } from '../services/auth';
@@ -10,6 +10,7 @@ import { FeedCardSkeleton } from '../components/SkeletonLoader';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export default function FeedScreen({ navigation }) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { user } = useAuth();
   const [tab, setTab] = useState('Trending');
   const [outfits, setOutfits] = useState([]);
@@ -86,6 +87,7 @@ export default function FeedScreen({ navigation }) {
     const isFollowing = following.has(item.userId);
     const isOwn = user?.uid === item.userId;
     const displayName = item.username || item.displayName || 'User';
+    const imageHeight = screenWidth * 1.25;
 
     return (
       <TouchableOpacity
@@ -119,7 +121,7 @@ export default function FeedScreen({ navigation }) {
           )}
         </View>
 
-        <Image source={{ uri: item.imageURL }} style={styles.outfitImage} resizeMode="cover" />
+        <Image source={{ uri: item.imageURL }} style={[styles.outfitImage, { height: imageHeight }]} resizeMode="cover" />
 
         <View style={styles.cardFooter}>
           <HangerRow rating={item.avgRating ?? 0} count={item.ratingCount ?? 0} />
@@ -172,7 +174,9 @@ export default function FeedScreen({ navigation }) {
           data={outfits}
           keyExtractor={item => item.id}
           renderItem={({ item }) => <OutfitCard item={item} />}
-          contentContainerStyle={{ padding: SPACING.md, gap: SPACING.md }}
+          contentContainerStyle={{ gap: 1 }}
+          snapToInterval={screenWidth * 1.25 + CARD_CHROME}
+          decelerationRate="fast"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -189,6 +193,9 @@ export default function FeedScreen({ navigation }) {
   );
 }
 
+// card header (~70) + card footer (~56) + 1px separator
+const CARD_CHROME = 127;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.white },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.sm },
@@ -203,7 +210,7 @@ const styles = StyleSheet.create({
   tabUnderline: { height: 2, backgroundColor: COLORS.textPrimary, borderRadius: 1, marginTop: 4 },
   sectionLabel: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   sectionText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  card: { backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  card: { backgroundColor: COLORS.white, borderBottomWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md },
   avatarCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
   avatarText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
@@ -214,7 +221,7 @@ const styles = StyleSheet.create({
   followBtnActive: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   followBtnText: { color: COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: '700' },
   followBtnTextActive: { color: COLORS.textPrimary },
-  outfitImage: { width: '100%', height: 280 },
+  outfitImage: { width: '100%' },
   cardFooter: { padding: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   hangerRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   hangerIcon: { fontSize: 18, color: COLORS.border },
