@@ -39,6 +39,29 @@ export const COLORS = {
   primaryTextOnPrimary: '#FFFFFF',
 };
 
+export const DARK_COLORS = {
+  primary: '#AF11D3',
+  primaryLight: '#D44EF0',
+  primaryDark: '#8A0DAA',
+  white: '#111827',
+  black: '#F9FAFB',
+  background: '#111827',
+  surface: '#1F2937',
+  card: '#1F2937',
+  border: '#374151',
+  overlay: 'rgba(0,0,0,0.6)',
+  textPrimary: '#F9FAFB',
+  textSecondary: '#9CA3AF',
+  textMuted: '#6B7280',
+  placeholder: '#4B5563',
+  success: '#16A34A',
+  error: '#DC2626',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+  star: '#FFB800',
+  primaryTextOnPrimary: '#FFFFFF',
+};
+
 // Spacing scale (4pt baseline)
 export const SPACING = {
   xs: 4,

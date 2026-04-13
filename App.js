@@ -1,12 +1,22 @@
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import AppNavigator from './src/navigation/AppNavigator';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+
+function Root() {
+  const { isDark } = useTheme();
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <AppNavigator />
+    </>
+  );
+}
 
 export default function App() {
   return (
-    <>
-      <StatusBar style="dark" />
-      <AppNavigator />
-    </>
+    <ThemeProvider>
+      <Root />
+    </ThemeProvider>
   );
 }

@@ -71,6 +71,22 @@ export async function getFollowing(uid) {
   return snap.docs.map(d => d.id);
 }
 
+export async function searchUsers(term) {
+  const snap = await getDocs(collection(db, 'users'));
+  const lower = term.toLowerCase();
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(u =>
+      (u.username ?? '').toLowerCase().includes(lower) ||
+      (u.displayName ?? '').toLowerCase().includes(lower)
+    );
+}
+
+export async function getFollowers(uid) {
+  const snap = await getDocs(collection(db, 'users', uid, 'followers'));
+  return snap.docs.map(d => d.id);
+}
+
 export async function followUser(currentUid, targetUid) {
   await setDoc(doc(db, 'users', currentUid, 'following', targetUid), { followedAt: serverTimestamp() });
   await setDoc(doc(db, 'users', targetUid, 'followers', currentUid), { followedAt: serverTimestamp() });

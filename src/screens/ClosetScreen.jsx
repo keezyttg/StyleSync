@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { getClosetItems, incrementWornCount } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { ClosetRowSkeleton } from '../components/SkeletonLoader';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
-const SORTS = ['Newest', 'Most Worn', 'Least Worn', 'Best CPW', 'Price: High', 'Price: Low'];
+const SORTS = ['Newest', 'Most Worn', 'Least Worn', 'Price: High', 'Price: Low'];
 
 export default function ClosetScreen({ navigation }) {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [category, setCategory] = useState('All');
@@ -28,10 +30,6 @@ export default function ClosetScreen({ navigation }) {
     setLoading(false);
   }, [user, category]);
 
-  // Computed stats from real data
-  const avgCPW = items.length
-    ? (items.reduce((sum, i) => sum + (i.costPerWear ?? i.price ?? 0), 0) / items.length).toFixed(2)
-    : '—';
   const totalWears = items.reduce((sum, i) => sum + (i.wornCount ?? 0), 0);
 
   function sortedItems() {
@@ -39,11 +37,6 @@ export default function ClosetScreen({ navigation }) {
     switch (sort) {
       case 'Most Worn': return arr.sort((a, b) => (b.wornCount ?? 0) - (a.wornCount ?? 0));
       case 'Least Worn': return arr.sort((a, b) => (a.wornCount ?? 0) - (b.wornCount ?? 0));
-      case 'Best CPW': return arr.sort((a, b) => {
-        const cpwA = a.wornCount > 0 && a.price > 0 ? a.price / a.wornCount : Infinity;
-        const cpwB = b.wornCount > 0 && b.price > 0 ? b.price / b.wornCount : Infinity;
-        return cpwA - cpwB;
-      });
       case 'Price: High': return arr.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
       case 'Price: Low': return arr.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
       default: return arr; // Newest — already sorted by addedAt desc
@@ -64,23 +57,14 @@ export default function ClosetScreen({ navigation }) {
   useEffect(() => { load(); }, [load]);
 
   function ItemCard({ item }) {
-    const cpw = item.wornCount > 0 && item.price > 0
-      ? `$${(item.price / item.wornCount).toFixed(2)}/wear`
-      : item.price > 0 ? `$${item.price.toFixed(2)} paid` : null;
-
     return (
-      <TouchableOpacity style={styles.itemCard} activeOpacity={0.85}>
+      <TouchableOpacity style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]} activeOpacity={0.85}>
         <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
         <View style={styles.itemInfo}>
-          <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.itemMeta}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
+          <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.itemMeta, { color: colors.textSecondary }]}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
           <View style={styles.itemFooter}>
-            {cpw && (
-              <View style={styles.cpwBadge}>
-                <Text style={styles.cpwText}>{cpw}</Text>
-              </View>
-            )}
-            <Text style={styles.wornText}>Worn {item.wornCount ?? 0}×</Text>
+            <Text style={[styles.wornText, { color: colors.textSecondary }]}>Worn {item.wornCount ?? 0}×</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.wornBtn} onPress={() => handleIncrementWorn(item)}>
@@ -92,9 +76,9 @@ export default function ClosetScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Closet</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>My Closet</Text>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => navigation.navigate('AddItem')}
@@ -109,12 +93,11 @@ export default function ClosetScreen({ navigation }) {
       <View style={styles.statsRow}>
         {[
           { value: items.length, label: 'Pieces' },
-          { value: `$${avgCPW}`, label: 'Avg Cost/Wear' },
           { value: totalWears, label: 'Total Wears' },
         ].map((stat, i) => (
-          <View key={i} style={styles.statBox}>
-            <Text style={styles.statValue}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
+          <View key={i} style={[styles.statBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{stat.label}</Text>
           </View>
         ))}
       </View>
@@ -136,7 +119,7 @@ export default function ClosetScreen({ navigation }) {
         )}
       />
 
-      <TouchableOpacity style={styles.buildBanner} onPress={() => navigation.navigate('BuildOutfit')}>
+      <TouchableOpacity style={[styles.buildBanner, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => navigation.navigate('BuildOutfit')}>
         <Text style={styles.buildIcon}>⊞</Text>
         <View>
           <Text style={styles.buildTitle}>Build an outfit</Text>
@@ -152,14 +135,14 @@ export default function ClosetScreen({ navigation }) {
       </View>
 
       {showSortMenu && (
-        <View style={styles.sortMenu}>
+        <View style={[styles.sortMenu, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {SORTS.map(s => (
             <TouchableOpacity
               key={s}
-              style={styles.sortOption}
+              style={[styles.sortOption, { borderColor: colors.border }]}
               onPress={() => { setSort(s); setShowSortMenu(false); }}
             >
-              <Text style={[styles.sortOptionText, sort === s && styles.sortOptionActive]}>{s}</Text>
+              <Text style={[styles.sortOptionText, { color: colors.textPrimary }, sort === s && styles.sortOptionActive]}>{s}</Text>
               {sort === s && <Text style={styles.sortCheck}>✓</Text>}
             </TouchableOpacity>
           ))}
@@ -225,8 +208,6 @@ const styles = StyleSheet.create({
   itemName: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.textPrimary },
   itemMeta: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
   itemFooter: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.sm },
-  cpwBadge: { backgroundColor: COLORS.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.sm },
-  cpwText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '700' },
   wornText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '500' },
   wornBtn: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderColor: COLORS.border },
   wornBtnText: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.primary },
