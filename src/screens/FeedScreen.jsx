@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, Image, TouchableOpacity,
-  StyleSheet, RefreshControl, useWindowDimensions,
+  StyleSheet, RefreshControl, useWindowDimensions, ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTrendingOutfits, getCommunityOutfits } from '../services/outfits';
 import { getFollowing, followUser, unfollowUser } from '../services/auth';
+import { getUserCommunities } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
 import { FeedCardSkeleton } from '../components/SkeletonLoader';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+
+const COMMUNITIES_CACHE_KEY = 'user_communities_cache';
 
 export default function FeedScreen({ navigation }) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -18,11 +22,25 @@ export default function FeedScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [following, setFollowing] = useState(new Set());
+  const [myCommunities, setMyCommunities] = useState([]);
+  const [communityFilter, setCommunityFilter] = useState('All');
 
   // Load who the current user follows
   useEffect(() => {
     if (!user) return;
     getFollowing(user.uid).then(ids => setFollowing(new Set(ids))).catch(() => {});
+  }, [user]);
+
+  // Load joined communities — serve cache instantly, then refresh in background
+  useEffect(() => {
+    if (!user) return;
+    AsyncStorage.getItem(COMMUNITIES_CACHE_KEY + user.uid)
+      .then(raw => { if (raw) setMyCommunities(JSON.parse(raw)); })
+      .catch(() => {});
+    getUserCommunities(user.uid).then(communities => {
+      setMyCommunities(communities);
+      AsyncStorage.setItem(COMMUNITIES_CACHE_KEY + user.uid, JSON.stringify(communities)).catch(() => {});
+    }).catch(() => {});
   }, [user]);
 
   const load = useCallback(async () => {
@@ -45,6 +63,15 @@ export default function FeedScreen({ navigation }) {
     await load();
     setRefreshing(false);
   }
+
+  const filteredOutfits = (() => {
+    if (tab !== 'Community' || communityFilter === 'All') return outfits;
+    const community = myCommunities.find(c => c.name === communityFilter);
+    if (!community || !community.labels?.length) return outfits;
+    return outfits.filter(o =>
+      o.tags?.some(tag => community.labels.map(l => l.toLowerCase()).includes(tag.toLowerCase()))
+    );
+  })();
 
   async function handleFollow(targetUid) {
     if (!user || !targetUid || targetUid === user.uid) return;
@@ -145,7 +172,7 @@ export default function FeedScreen({ navigation }) {
 
       <View style={styles.tabRow}>
         {['Trending', 'Community'].map(t => (
-          <TouchableOpacity key={t} style={styles.tabBtn} onPress={() => setTab(t)}>
+          <TouchableOpacity key={t} style={styles.tabBtn} onPress={() => { setTab(t); setCommunityFilter('All'); }}>
             <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
             {tab === t && <View style={styles.tabUnderline} />}
           </TouchableOpacity>
@@ -156,6 +183,27 @@ export default function FeedScreen({ navigation }) {
         <View style={styles.sectionLabel}>
           <Text style={styles.sectionText}>Top rated this week</Text>
         </View>
+      )}
+
+      {tab === 'Community' && myCommunities.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterRow}
+        >
+          {['All', ...myCommunities.map(c => c.name)].map(name => (
+            <TouchableOpacity
+              key={name}
+              style={[styles.filterChip, communityFilter === name && styles.filterChipActive]}
+              onPress={() => setCommunityFilter(name)}
+            >
+              <Text style={[styles.filterChipText, communityFilter === name && styles.filterChipTextActive]}>
+                {name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       )}
 
       {loading ? (
@@ -171,9 +219,9 @@ export default function FeedScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
-          data={outfits}
+          data={filteredOutfits}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <OutfitCard item={item} />}
+          renderItem={({ item }) => <OutfitCard item={item} />
           contentContainerStyle={{ gap: 1 }}
           snapToInterval={screenWidth * 1.25 + CARD_CHROME}
           decelerationRate="fast"
@@ -210,6 +258,12 @@ const styles = StyleSheet.create({
   tabUnderline: { height: 2, backgroundColor: COLORS.textPrimary, borderRadius: 1, marginTop: 4 },
   sectionLabel: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   sectionText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
+  filterRow: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm },
+  filterChip: { paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white },
+  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterChipText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '500' },
+  filterChipTextActive: { color: COLORS.white, fontWeight: '700' },
   card: { backgroundColor: COLORS.white, borderBottomWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md },
   avatarCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
