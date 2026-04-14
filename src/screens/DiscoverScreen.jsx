@@ -87,9 +87,23 @@ export default function DiscoverScreen({ navigation }) {
     setCommLoading(false);
   }, [user]);
 
+  // Load communities the first time the tab opens
   useEffect(() => {
     if (tab === 'Communities' && communities.length === 0) loadCommunities();
   }, [tab]);
+
+  // Re-check joined state every time this screen gains focus (catches joins from CommunityDetailScreen)
+  useFocusEffect(
+    useCallback(() => {
+      if (!user || communities.length === 0) return;
+      Promise.all(communities.map(c => isJoined(c.id, user.uid).catch(() => false)))
+        .then(results => {
+          const joinedSet = new Set(communities.filter((_, i) => results[i]).map(c => c.id));
+          setJoinedCommunities(joinedSet);
+        })
+        .catch(() => {});
+    }, [user, communities])
+  );
 
   // ── People search ─────────────────────────────────────────────────────────
   async function handleSearch(text) {
@@ -324,7 +338,7 @@ export default function DiscoverScreen({ navigation }) {
                 return (
                   <TouchableOpacity
                     style={[styles.communityRow, { borderBottomColor: colors.border }]}
-                    onPress={() => navigation.navigate('CommunityDetail', { community: item })}
+                    onPress={() => navigation.navigate('CommunityDetail', { community: item, initiallyJoined: joinedCommunities.has(item.id) })}
                   >
                     <View style={styles.communityAvatar}>
                       <Text style={styles.communityAvatarText}>{item.name[0].toUpperCase()}</Text>

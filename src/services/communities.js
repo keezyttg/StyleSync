@@ -1,6 +1,7 @@
 import {
   collection, getDocs, doc, getDoc, addDoc,
   setDoc, deleteDoc, query, where, serverTimestamp,
+  updateDoc, increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -38,22 +39,19 @@ export async function createCommunity(data) {
 }
 
 export async function joinCommunity(communityId, userId) {
-  await setDoc(doc(db, 'communities', communityId, 'members', userId), {
-    joinedAt: serverTimestamp(),
-  });
-  // best-effort increment
-  try {
-    const { updateDoc, increment } = await import('firebase/firestore');
-    await updateDoc(doc(db, 'communities', communityId), { memberCount: increment(1) });
-  } catch {}
+  const memberRef = doc(db, 'communities', communityId, 'members', userId);
+  const existing = await getDoc(memberRef);
+  if (existing.exists()) return; // already a member — don't double-increment
+  await setDoc(memberRef, { joinedAt: serverTimestamp() });
+  await updateDoc(doc(db, 'communities', communityId), { memberCount: increment(1) });
 }
 
 export async function leaveCommunity(communityId, userId) {
-  await deleteDoc(doc(db, 'communities', communityId, 'members', userId));
-  try {
-    const { updateDoc, increment } = await import('firebase/firestore');
-    await updateDoc(doc(db, 'communities', communityId), { memberCount: increment(-1) });
-  } catch {}
+  const memberRef = doc(db, 'communities', communityId, 'members', userId);
+  const existing = await getDoc(memberRef);
+  if (!existing.exists()) return; // not a member — don't double-decrement
+  await deleteDoc(memberRef);
+  await updateDoc(doc(db, 'communities', communityId), { memberCount: increment(-1) });
 }
 
 export async function isJoined(communityId, userId) {

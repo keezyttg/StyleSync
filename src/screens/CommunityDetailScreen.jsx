@@ -1,21 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { getCommunityOutfits } from '../services/outfits';
-import { joinCommunity, leaveCommunity, isJoined } from '../services/communities';
+import { getCommunity, joinCommunity, leaveCommunity, isJoined } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export default function CommunityDetailScreen({ navigation, route }) {
-  const { community } = route.params;
+  const { community, initiallyJoined } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [joined, setJoined] = useState(false);
+  const [joined, setJoined] = useState(initiallyJoined ?? false);
   const [memberCount, setMemberCount] = useState(community.memberCount ?? 0);
+  const toggling = useRef(false);
 
   useEffect(() => {
+    // Fetch fresh community data so member count is always accurate
+    if (community.id) {
+      getCommunity(community.id)
+        .then(fresh => { if (fresh) setMemberCount(fresh.memberCount ?? 0); })
+        .catch(() => {});
+    }
+
     getCommunityOutfits(20)
       .then(data => setOutfits(data))
       .catch(() => setOutfits([]))
@@ -27,7 +35,8 @@ export default function CommunityDetailScreen({ navigation, route }) {
   }, []);
 
   async function handleJoinToggle() {
-    if (!user || !community.id) return;
+    if (!user || !community.id || toggling.current) return;
+    toggling.current = true;
     const wasJoined = joined;
     setJoined(!wasJoined);
     setMemberCount(c => wasJoined ? c - 1 : c + 1);
@@ -38,6 +47,8 @@ export default function CommunityDetailScreen({ navigation, route }) {
     } catch {
       setJoined(wasJoined);
       setMemberCount(c => wasJoined ? c + 1 : c - 1);
+    } finally {
+      toggling.current = false;
     }
   }
 
