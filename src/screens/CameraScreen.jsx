@@ -26,7 +26,7 @@ export default function CameraScreen({ navigation }) {
 
   // Flash through: off → on → auto
   const FLASH_STATES = ['off', 'on', 'auto'];
-  const FLASH_ICONS = { off: '⚡️', on: '⚡', auto: 'A' };
+  const FLASH_ICONS = { off: '🚫', on: '⚡', auto: 'A' };
   function cycleFlash() {
     setFlash(f => {
       const idx = FLASH_STATES.indexOf(f);
