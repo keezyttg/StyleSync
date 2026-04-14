@@ -8,6 +8,7 @@ import {
 import { doc, setDoc, getDoc, getDocFromServer, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from './firebase';
+import { getUserPushToken, sendPushNotification, saveNotification } from './notifications';
 
 export async function uploadProfileImage(uri, uid) {
   const response = await fetch(uri);
@@ -92,6 +93,24 @@ export async function followUser(currentUid, targetUid) {
   await setDoc(doc(db, 'users', targetUid, 'followers', currentUid), { followedAt: serverTimestamp() });
   await updateDoc(doc(db, 'users', currentUid), { following: increment(1) });
   await updateDoc(doc(db, 'users', targetUid), { followers: increment(1) });
+
+  // Notify the followed user
+  const [followerSnap, targetToken] = await Promise.all([
+    getDoc(doc(db, 'users', currentUid)),
+    getUserPushToken(targetUid),
+  ]);
+  const followerData = followerSnap.data() ?? {};
+  const followerName = followerData.displayName || followerData.username || 'Someone';
+  sendPushNotification(targetToken, 'New Follower', `${followerName} started following you`);
+  saveNotification(targetUid, {
+    type: 'follow',
+    fromUid: currentUid,
+    fromName: followerName,
+    fromPhoto: followerData.photoURL ?? null,
+    message: `${followerName} started following you`,
+    outfitId: null,
+    outfitImage: null,
+  });
 }
 
 export async function unfollowUser(currentUid, targetUid) {

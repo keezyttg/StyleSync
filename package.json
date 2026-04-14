@@ -16,6 +16,7 @@
     "expo": "~54.0.33",
     "expo-camera": "~17.0.10",
     "expo-image-picker": "~17.0.10",
+    "expo-notifications": "~0.32.16",
     "expo-status-bar": "~3.0.9",
     "firebase": "^12.11.0",
     "react": "19.1.0",

@@ -1,17 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  NavigationContainer,
+  createNavigationContainerRef,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { ONBOARDING_KEY } from '../screens/OnboardingScreen';
+
 import LoginScreen from '../screens/LoginScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import FeedScreen from '../screens/FeedScreen';
 import ClosetScreen from '../screens/ClosetScreen';
 import PostScreen from '../screens/PostScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import OutfitDetailScreen from '../screens/OutfitDetailScreen';
 import BuildOutfitScreen from '../screens/BuildOutfitScreen';
 import AddItemScreen from '../screens/AddItemScreen';
@@ -22,6 +30,8 @@ import CameraScreen from '../screens/CameraScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 
 import { COLORS } from '../constants/theme';
+
+export const navigationRef = createNavigationContainerRef();
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -68,34 +78,20 @@ function CustomTabBar({ state, navigation }) {
 
           if (tab.isAction) {
             return (
-              <TouchableOpacity
-                key={tab.name}
-                style={tabStyles.tabItem}
-                onPress={onPress}
-                activeOpacity={0.7}
-              >
-                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>
-                  {tab.icon}
-                </Text>
+              <TouchableOpacity key={tab.name} style={tabStyles.tabItem} onPress={onPress} activeOpacity={0.7}>
+                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
               </TouchableOpacity>
             );
           }
 
           return (
-            <TouchableOpacity
-              key={tab.name}
-              style={tabStyles.tabItem}
-              onPress={onPress}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity key={tab.name} style={tabStyles.tabItem} onPress={onPress} activeOpacity={0.7}>
               {focused ? (
                 <View style={tabStyles.pill}>
                   <Text style={tabStyles.pillIcon}>{tab.icon}</Text>
                 </View>
               ) : (
-                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>
-                  {tab.icon}
-                </Text>
+                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
               )}
             </TouchableOpacity>
           );
@@ -130,9 +126,21 @@ function AuthStack() {
 }
 
 function AppStack() {
+  const [initialRoute, setInitialRoute] = useState(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then(val => setInitialRoute(val === 'true' ? 'Main' : 'Onboarding'))
+      .catch(() => setInitialRoute('Main'));
+  }, []);
+
+  if (!initialRoute) return null;
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Onboarding"      component={OnboardingScreen} />
       <Stack.Screen name="Main"            component={MainTabs} />
+      <Stack.Screen name="Notifications"   component={NotificationsScreen} />
       <Stack.Screen name="OutfitDetail"    component={OutfitDetailScreen}    options={{ presentation: 'modal' }} />
       <Stack.Screen name="Post"            component={PostScreen}            options={{ presentation: 'modal' }} />
       <Stack.Screen name="BuildOutfit"     component={BuildOutfitScreen}     options={{ presentation: 'modal' }} />
@@ -151,7 +159,7 @@ export default function AppNavigator() {
   if (loading) return null;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
@@ -170,18 +178,12 @@ const tabStyles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 6,
     borderWidth: 1,
-    // Shadow
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 24,
     elevation: 12,
   },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-  },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', height: '100%' },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -191,16 +193,6 @@ const tabStyles = StyleSheet.create({
     borderRadius: 24,
     gap: 5,
   },
-  pillIcon: {
-    fontSize: 17,
-  },
-  pillLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.1,
-  },
-  inactiveIcon: {
-    fontSize: 22,
-  },
+  pillIcon: { fontSize: 17 },
+  inactiveIcon: { fontSize: 22 },
 });

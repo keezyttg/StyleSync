@@ -10,6 +10,8 @@ import { getUserCommunities } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { FeedCardSkeleton } from '../components/SkeletonLoader';
+import { getUnreadCount } from '../services/notifications';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const COMMUNITIES_CACHE_KEY = 'user_communities_cache';
@@ -26,6 +28,14 @@ export default function FeedScreen({ navigation }) {
   const [following, setFollowing] = useState(new Set());
   const [myCommunities, setMyCommunities] = useState([]);
   const [communityFilter, setCommunityFilter] = useState('All');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      getUnreadCount(user.uid).then(setUnreadCount).catch(() => {});
+    }, [user])
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -183,8 +193,13 @@ export default function FeedScreen({ navigation }) {
           <Text style={[styles.logoBlack, { color: colors.textPrimary }]}>Style</Text>
           <Text style={styles.logoMagenta}>Sync</Text>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.bellWrap}>
           <Text style={styles.bellIcon}>🔔</Text>
+          {unreadCount > 0 && (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -268,7 +283,10 @@ const styles = StyleSheet.create({
   logoRow: { flexDirection: 'row' },
   logoBlack: { fontSize: 24, fontWeight: '900' },
   logoMagenta: { fontSize: 24, fontStyle: 'italic', color: COLORS.primary },
+  bellWrap: { position: 'relative' },
   bellIcon: { fontSize: 22 },
+  bellBadge: { position: 'absolute', top: -4, right: -6, backgroundColor: COLORS.primary, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
+  bellBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
   tabRow: { flexDirection: 'row', paddingHorizontal: SPACING.md, borderBottomWidth: 1 },
   tabBtn: { marginRight: SPACING.xl, paddingBottom: SPACING.sm },
   tabText: { fontSize: FONT_SIZE.md, fontWeight: '500' },

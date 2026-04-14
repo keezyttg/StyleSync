@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Share } from 'react-native';
 import { rateOutfit, saveOutfit, deleteOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { getUserPushToken, sendPushNotification, saveNotification } from '../services/notifications';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 function HangerIcon({ filled, size = 28 }) {
@@ -42,8 +43,38 @@ export default function OutfitDetailScreen({ route, navigation }) {
     try {
       await rateOutfit(outfit.id, user.uid, value);
       setUserRating(value);
+      // Notify outfit owner (skip if rating own outfit)
+      if (outfit.userId && outfit.userId !== user.uid) {
+        const token = await getUserPushToken(outfit.userId);
+        const raterName = user.displayName || 'Someone';
+        sendPushNotification(token, 'New Rating', `${raterName} rated your outfit ${value}/5 ★`);
+        saveNotification(outfit.userId, {
+          type: 'rating',
+          fromUid: user.uid,
+          fromName: raterName,
+          fromPhoto: user.photoURL ?? null,
+          message: `${raterName} rated your outfit ${value}/5 ★`,
+          outfitId: outfit.id,
+          outfitImage: outfit.imageURL ?? null,
+        });
+      }
     } catch (err) {
       Alert.alert('Error', err.message);
+    }
+  }
+
+  async function handleShare() {
+    const poster = outfit.username || outfit.displayName || 'someone';
+    try {
+      await Share.share({
+        title: 'StyleSync Outfit',
+        message: `Check out this outfit by @${poster} on StyleSync 👗\n${outfit.imageURL}`,
+        url: outfit.imageURL,
+      });
+    } catch (err) {
+      if (err.message !== 'The user did not share') {
+        Alert.alert('Error', err.message);
+      }
     }
   }
 
@@ -90,11 +121,16 @@ export default function OutfitDetailScreen({ route, navigation }) {
         <Text style={styles.backText}>‹</Text>
       </TouchableOpacity>
 
-      {isOwner && (
-        <TouchableOpacity style={styles.menuBtn} onPress={handleDelete}>
-          <Text style={styles.menuText}>🗑</Text>
+      <View style={styles.topRight}>
+        <TouchableOpacity style={styles.overlayBtn} onPress={handleShare}>
+          <Text style={styles.overlayBtnText}>⬆</Text>
         </TouchableOpacity>
-      )}
+        {isOwner && (
+          <TouchableOpacity style={styles.overlayBtn} onPress={handleDelete}>
+            <Text style={styles.overlayBtnText}>🗑</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {saveMsg && (
         <View style={styles.saveToast}>
@@ -172,8 +208,9 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '62%' },
   backBtn: { position: 'absolute', top: 56, left: SPACING.md, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   backText: { color: COLORS.white, fontSize: 24, fontWeight: '300' },
-  menuBtn: { position: 'absolute', top: 56, right: SPACING.md, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  menuText: { fontSize: 16 },
+  topRight: { position: 'absolute', top: 56, right: SPACING.md, gap: 10 },
+  overlayBtn: { backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
+  overlayBtnText: { fontSize: 16, color: COLORS.white },
   saveToast: { position: 'absolute', top: 104, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: SPACING.lg, paddingVertical: 8, borderRadius: BORDER_RADIUS.full },
   saveToastText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
   hangerOverlay: { position: 'absolute', right: SPACING.md, bottom: '40%', alignItems: 'center', gap: 6 },
