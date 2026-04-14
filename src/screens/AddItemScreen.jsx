@@ -63,7 +63,7 @@ export default function AddItemScreen({ navigation }) {
     setLoading(true);
     try {
       const imageURL = await uploadItemImage(imageUri, user.uid);
-      await addClothingItem({ userId: user.uid, imageURL, name: name.trim(), category, size, brand: brand.trim(), price: parseFloat(price) || 0, tags: selectedTags });
+      await addClothingItem({ userId: user.uid, imageURL, name: name.trim(), category, size, brand: brand.trim(), price: parseFloat(price) || 0, currency, tags: selectedTags });
       Alert.alert('Added!', `${name} has been added to your closet.`);
       navigation.goBack();
     } catch (err) {
@@ -161,7 +161,13 @@ export default function AddItemScreen({ navigation }) {
           placeholder={`${currency}0.00`}
           placeholderTextColor={colors.textMuted}
           value={price}
-          onChangeText={setPrice}
+          onChangeText={text => {
+            // Strip everything except digits and one decimal point
+            const cleaned = text.replace(/[^0-9.]/g, '');
+            const parts = cleaned.split('.');
+            const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : cleaned;
+            setPrice(sanitized);
+          }}
           keyboardType="decimal-pad"
           maxLength={8}
         />

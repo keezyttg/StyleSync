@@ -172,17 +172,35 @@ export default function OutfitDetailScreen({ route, navigation }) {
           <Text style={[styles.caption, { color: colors.textPrimary }]}>{outfit.caption}</Text>
         ) : null}
 
-        {outfit.items && outfit.items.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.itemsRow}>
-            {outfit.items.map((item, idx) => (
-              <View key={idx} style={styles.itemCard}>
-                <Image source={{ uri: item.imageURL }} style={[styles.itemImage, { backgroundColor: colors.surface }]} />
-                <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
-                <Text style={[styles.itemCategory, { color: colors.textSecondary }]}>{item.category}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        )}
+        {outfit.items && outfit.items.length > 0 && (() => {
+          const itemsWithPrice = outfit.items.filter(i => i.price > 0);
+          const total = itemsWithPrice.reduce((sum, i) => sum + (i.price ?? 0), 0);
+          const symbol = itemsWithPrice[0]?.currency ?? '$';
+          return (
+            <>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.itemsRow}>
+                {outfit.items.map((item, idx) => (
+                  <View key={idx} style={styles.itemCard}>
+                    <Image source={{ uri: item.imageURL }} style={[styles.itemImage, { backgroundColor: colors.surface }]} />
+                    <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+                    <Text style={[styles.itemCategory, { color: colors.textSecondary }]}>{item.category}</Text>
+                    {item.price > 0 && (
+                      <Text style={[styles.itemPrice, { color: colors.textPrimary }]}>
+                        {item.currency ?? '$'}{item.price.toFixed(2)}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
+              {total > 0 && (
+                <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Total outfit value</Text>
+                  <Text style={[styles.totalValue, { color: colors.textPrimary }]}>{symbol}{total.toFixed(2)}</Text>
+                </View>
+              )}
+            </>
+          );
+        })()}
 
         {isOwner && (
           <TouchableOpacity style={styles.deleteOutfitBtn} onPress={handleDelete}>
@@ -229,6 +247,10 @@ const styles = StyleSheet.create({
   itemImage: { width: 90, height: 90, borderRadius: BORDER_RADIUS.sm },
   itemName: { fontSize: FONT_SIZE.xs, fontWeight: '600', marginTop: 4 },
   itemCategory: { fontSize: FONT_SIZE.xs },
+  itemPrice: { fontSize: FONT_SIZE.xs, fontWeight: '700', marginTop: 2 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, paddingTop: SPACING.sm, marginBottom: SPACING.md },
+  totalLabel: { fontSize: FONT_SIZE.sm, fontWeight: '500' },
+  totalValue: { fontSize: FONT_SIZE.md, fontWeight: '800' },
   deleteOutfitBtn: { borderWidth: 1, borderColor: COLORS.error, borderRadius: BORDER_RADIUS.md, paddingVertical: 12, alignItems: 'center', marginBottom: SPACING.sm },
   deleteOutfitText: { color: COLORS.error, fontSize: FONT_SIZE.md, fontWeight: '600' },
   saveOutfitBtn: { borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.xl },

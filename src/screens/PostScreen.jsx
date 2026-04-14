@@ -47,6 +47,8 @@ export default function PostScreen({ navigation, route }) {
         category: i.category,
         imageURL: i.imageURL,
         brand: i.brand ?? '',
+        price: i.price ?? 0,
+        currency: i.currency ?? '$',
       }));
       await createOutfit({
         userId: user.uid,
