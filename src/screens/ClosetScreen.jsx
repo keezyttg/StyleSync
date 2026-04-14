@@ -140,10 +140,10 @@ export default function ClosetScreen({ navigation }) {
         style={{ flexGrow: 0, flexShrink: 0 }}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.catChip, category === item && styles.catChipActive]}
+            style={[styles.catChip, { backgroundColor: colors.surface, borderColor: colors.border }, category === item && styles.catChipActive]}
             onPress={() => setCategory(item)}
           >
-            <Text style={[styles.catText, category === item && styles.catTextActive]}>{item}</Text>
+            <Text style={[styles.catText, { color: colors.textPrimary }, category === item && styles.catTextActive]}>{item}</Text>
           </TouchableOpacity>
         )}
       />
@@ -151,15 +151,15 @@ export default function ClosetScreen({ navigation }) {
       <TouchableOpacity style={[styles.buildBanner, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => navigation.navigate('BuildOutfit')}>
         <Text style={styles.buildIcon}>⊞</Text>
         <View>
-          <Text style={styles.buildTitle}>Build an outfit</Text>
-          <Text style={styles.buildSub}>Mix pieces from your closet & post</Text>
+          <Text style={[styles.buildTitle, { color: colors.textPrimary }]}>Build an outfit</Text>
+          <Text style={[styles.buildSub, { color: colors.textSecondary }]}>Mix pieces from your closet & post</Text>
         </View>
       </TouchableOpacity>
 
       <View style={styles.listHeader}>
-        <Text style={styles.pieceCount}>{items.length} pieces</Text>
+        <Text style={[styles.pieceCount, { color: colors.textSecondary }]}>{items.length} pieces</Text>
         <TouchableOpacity onPress={() => setShowSortMenu(s => !s)}>
-          <Text style={styles.sortText}>{sort} ▾</Text>
+          <Text style={[styles.sortText, { color: colors.textPrimary }]}>{sort} ▾</Text>
         </TouchableOpacity>
       </View>
 
@@ -190,8 +190,8 @@ export default function ClosetScreen({ navigation }) {
           contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>Your closet is empty — let's get you started</Text>
-              <Text style={styles.emptyText}>Add pieces to track cost-per-wear, build outfits, and get outfit ideas. Snap a photo or import from your gallery to begin.</Text>
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Your closet is empty — let's get you started</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Add pieces to track cost-per-wear, build outfits, and get outfit ideas. Snap a photo or import from your gallery to begin.</Text>
               <TouchableOpacity
                 style={styles.emptyBtn}
                 onPress={() => navigation.navigate('AddItem')}
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
   categoryRow: { paddingHorizontal: SPACING.md, gap: SPACING.sm, marginBottom: SPACING.md, alignItems: 'center' },
   catChip: { paddingHorizontal: SPACING.md, paddingVertical: 8, height: 36, borderRadius: BORDER_RADIUS.full, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, justifyContent: 'center' },
-  catChipActive: { backgroundColor: COLORS.textPrimary, borderColor: COLORS.textPrimary },
+  catChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   catText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '500' },
   catTextActive: { color: COLORS.white, fontWeight: '700' },
   buildBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, marginHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md, gap: SPACING.md, borderWidth: 1, borderColor: COLORS.border },

@@ -24,7 +24,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
         .catch(() => {});
     }
 
-    getCommunityOutfits(20)
+    getCommunityOutfits(community.id, 20)
       .then(data => setOutfits(data))
       .catch(() => setOutfits([]))
       .finally(() => setLoading(false));

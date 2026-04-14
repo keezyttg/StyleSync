@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Share } from 'react-native';
-import { rateOutfit, saveOutfit, deleteOutfit } from '../services/outfits';
+import { rateOutfit, saveOutfit, isSaved, deleteOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPushToken, sendPushNotification, saveNotification } from '../services/notifications';
@@ -37,6 +37,12 @@ export default function OutfitDetailScreen({ route, navigation }) {
   const [saved, setSaved] = useState(false);
   const [saveMsg, setSaveMsg] = useState(false);
   const isOwner = user?.uid === outfit.userId;
+
+  useEffect(() => {
+    if (user && outfit.id) {
+      isSaved(user.uid, outfit.id).then(setSaved).catch(() => {});
+    }
+  }, [user, outfit.id]);
 
   async function handleRate(value) {
     if (!user) return;

@@ -102,9 +102,11 @@ export async function getOutfitsByFilter(filter = 'Hot', limitCount = 30) {
   return sorted.slice(0, limitCount);
 }
 
-export async function getCommunityOutfits(limitCount = 20) {
-  const q = query(collection(db, 'outfits'), limit(limitCount * 3));
-  const snap = await getDocs(q);
+export async function getCommunityOutfits(communityId = null, limitCount = 20) {
+  const constraints = communityId
+    ? [where('communityId', '==', communityId), limit(limitCount)]
+    : [limit(limitCount * 3)];
+  const snap = await getDocs(query(collection(db, 'outfits'), ...constraints));
   const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   return docs
     .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
@@ -167,21 +169,44 @@ export async function deleteOutfit(outfitId, userId) {
 
 export async function getSavedOutfits(userId) {
   const savedSnap = await getDocs(collection(db, 'users', userId, 'saved'));
-  const outfitIds = savedSnap.docs.map(d => d.data().outfitId).filter(Boolean);
-  if (outfitIds.length === 0) return [];
+  // Deduplicate by outfitId and silently clean up any duplicate save docs
+  const seen = new Set();
+  const uniqueIds = [];
+  const duplicates = [];
+  for (const d of savedSnap.docs) {
+    const id = d.data().outfitId;
+    if (!id) { duplicates.push(d); continue; }
+    if (seen.has(id)) { duplicates.push(d); }
+    else { seen.add(id); uniqueIds.push(id); }
+  }
+  if (duplicates.length > 0) {
+    Promise.all(duplicates.map(d => deleteDoc(d.ref))).catch(() => {});
+  }
+  if (uniqueIds.length === 0) return [];
   const outfits = await Promise.all(
-    outfitIds.map(id => getDoc(doc(db, 'outfits', id)).then(s => s.exists() ? { id: s.id, ...s.data() } : null))
+    uniqueIds.map(id => getDoc(doc(db, 'outfits', id)).then(s => s.exists() ? { id: s.id, ...s.data() } : null))
   );
   return outfits.filter(Boolean);
 }
 
 export async function unsaveOutfit(userId, outfitId) {
-  const savedSnap = await getDocs(collection(db, 'users', userId, 'saved'));
-  const match = savedSnap.docs.find(d => d.data().outfitId === outfitId);
-  if (match) await deleteDoc(match.ref);
+  // Delete ALL save docs for this outfit (handles any duplicates)
+  const savedSnap = await getDocs(
+    query(collection(db, 'users', userId, 'saved'), where('outfitId', '==', outfitId))
+  );
+  await Promise.all(savedSnap.docs.map(d => deleteDoc(d.ref)));
+}
+
+export async function isSaved(userId, outfitId) {
+  const snap = await getDocs(
+    query(collection(db, 'users', userId, 'saved'), where('outfitId', '==', outfitId), limit(1))
+  );
+  return !snap.empty;
 }
 
 export async function saveOutfit(userId, outfitId) {
+  const already = await isSaved(userId, outfitId);
+  if (already) return; // already saved — don't create a duplicate
   await addDoc(collection(db, 'users', userId, 'saved'), {
     outfitId,
     savedAt: serverTimestamp(),
