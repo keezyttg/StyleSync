@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { signIn, signUp, resetPassword } from '../services/auth';
+import { signIn, signUp, resetPassword, useGoogleSignIn } from '../services/auth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 import { ONBOARDING_KEY } from './OnboardingScreen';
@@ -17,6 +17,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { request, promptAsync } = useGoogleSignIn();
 
   async function handleSubmit() {
     if (!email || !password) { Alert.alert('Error', 'Please fill in all fields.'); return; }
@@ -120,7 +121,14 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.socialRow}>
-          {['🇬', '📘', '🍎', '📱'].map((icon, i) => (
+          <TouchableOpacity
+            style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            disabled={!request}
+            onPress={() => promptAsync()}
+          >
+            <Text style={styles.socialIcon}>🇬</Text>
+          </TouchableOpacity>
+          {['📘', '🍎', '📱'].map((icon, i) => (
             <TouchableOpacity key={i} style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}>
               <Text style={styles.socialIcon}>{icon}</Text>
             </TouchableOpacity>

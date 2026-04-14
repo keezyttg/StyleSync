@@ -4,11 +4,21 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithCredential,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocFromServer, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useEffect } from 'react';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { auth, db, storage } from './firebase';
 import { getUserPushToken, sendPushNotification, saveNotification } from './notifications';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const WEB_CLIENT_ID = '919194196963-8jiljrqft7ujo9bnp6rhe3jn7db4rsn0.apps.googleusercontent.com';
+const IOS_CLIENT_ID = '499566507317-kcql19nkcks9rc3jmlmtsvbnvk0fjlvp.apps.googleusercontent.com';
 
 export async function uploadProfileImage(uri, uid) {
   const response = await fetch(uri);
@@ -118,6 +128,20 @@ export async function followUser(currentUid, targetUid) {
       });
     })
     .catch(() => {});
+}
+
+export function useGoogleSignIn() {
+  const [request, response, promptAsync] = Google.useAuthRequest({ webClientId: WEB_CLIENT_ID, iosClientId: IOS_CLIENT_ID });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const credential = GoogleAuthProvider.credential(id_token);
+      signInWithCredential(auth, credential).catch(console.error);
+    }
+  }, [response]);
+
+  return { request, promptAsync };
 }
 
 export async function unfollowUser(currentUid, targetUid) {
