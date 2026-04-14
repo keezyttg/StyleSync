@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { getClosetItems, incrementWornCount } from '../services/closet';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { getClosetItems, incrementWornCount, decrementWornCount } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { ClosetRowSkeleton } from '../components/SkeletonLoader';
@@ -17,6 +17,7 @@ export default function ClosetScreen({ navigation }) {
   const [sort, setSort] = useState('Newest');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [enlargedItem, setEnlargedItem] = useState(null);
 
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
@@ -54,24 +55,52 @@ export default function ClosetScreen({ navigation }) {
     }
   }
 
+  async function handleDecrementWorn(item) {
+    if ((item.wornCount ?? 0) === 0) return;
+    try {
+      await decrementWornCount(user.uid, item.id, item.price ?? 0, item.wornCount ?? 0);
+      setItems(prev => prev.map(i =>
+        i.id === item.id ? { ...i, wornCount: Math.max(0, (i.wornCount ?? 0) - 1) } : i
+      ));
+    } catch (err) {
+      console.log('Worn count error:', err);
+    }
+  }
+
   useEffect(() => { load(); }, [load]);
 
   function ItemCard({ item }) {
+    const priceLabel = item.price > 0 ? `${item.currency ?? '$'}${item.price}` : null;
+    const worn = item.wornCount ?? 0;
     return (
-      <TouchableOpacity style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]} activeOpacity={0.85}>
-        <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
-        <View style={styles.itemInfo}>
-          <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
-          <Text style={[styles.itemMeta, { color: colors.textSecondary }]}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
-          <View style={styles.itemFooter}>
-            <Text style={[styles.wornText, { color: colors.textSecondary }]}>Worn {item.wornCount ?? 0}×</Text>
+      <View style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <TouchableOpacity style={styles.itemCardBody} onPress={() => setEnlargedItem(item)} activeOpacity={0.75}>
+          <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
+          <View style={styles.itemInfo}>
+            <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+            <Text style={[styles.itemMeta, { color: colors.textSecondary }]}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
+            <View style={styles.itemFooter}>
+              <View style={[styles.wornPill, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.wornPillText, { color: colors.textSecondary }]}>👟 {worn}×</Text>
+              </View>
+              {priceLabel && (
+                <View style={styles.pricePill}>
+                  <Text style={styles.pricePillText}>{priceLabel}</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
-        <TouchableOpacity style={styles.wornBtn} onPress={() => handleIncrementWorn(item)}>
-          <Text style={styles.wornBtnText}>+</Text>
-          <Text style={styles.wornBtnLabel}>Wore</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+        <View style={[styles.wornBtnGroup, { borderLeftColor: colors.border }]}>
+          <TouchableOpacity style={styles.wornHalf} onPress={() => handleIncrementWorn(item)}>
+            <Text style={styles.wornPlus}>+</Text>
+          </TouchableOpacity>
+          <View style={[styles.wornDivider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity style={styles.wornHalf} onPress={() => handleDecrementWorn(item)}>
+            <Text style={[styles.wornMinus, worn === 0 && styles.wornBtnDisabled]}>−</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
 
@@ -161,7 +190,7 @@ export default function ClosetScreen({ navigation }) {
           contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>Your closet is empty — let’s get you started</Text>
+              <Text style={styles.emptyTitle}>Your closet is empty — let's get you started</Text>
               <Text style={styles.emptyText}>Add pieces to track cost-per-wear, build outfits, and get outfit ideas. Snap a photo or import from your gallery to begin.</Text>
               <TouchableOpacity
                 style={styles.emptyBtn}
@@ -176,6 +205,41 @@ export default function ClosetScreen({ navigation }) {
           }
         />
       )}
+
+      <Modal visible={!!enlargedItem} transparent animationType="fade" onRequestClose={() => setEnlargedItem(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEnlargedItem(null)}>
+          {enlargedItem && (
+            <View style={styles.modalCard}>
+              <Image source={{ uri: enlargedItem.imageURL }} style={styles.modalImage} resizeMode="contain" />
+              <View style={styles.modalInfo}>
+                <Text style={styles.modalName}>{enlargedItem.name}</Text>
+                <Text style={styles.modalMeta}>
+                  {enlargedItem.category}{enlargedItem.size ? ` · ${enlargedItem.size}` : ''}
+                  {enlargedItem.brand ? ` · ${enlargedItem.brand}` : ''}
+                </Text>
+                <View style={styles.modalStats}>
+                  {enlargedItem.price > 0 && (
+                    <View style={styles.modalStat}>
+                      <Text style={styles.modalStatValue}>{enlargedItem.currency ?? '$'}{enlargedItem.price}</Text>
+                      <Text style={styles.modalStatLabel}>Paid</Text>
+                    </View>
+                  )}
+                  <View style={styles.modalStat}>
+                    <Text style={styles.modalStatValue}>{enlargedItem.wornCount ?? 0}×</Text>
+                    <Text style={styles.modalStatLabel}>Worn</Text>
+                  </View>
+                  {enlargedItem.price > 0 && (enlargedItem.wornCount ?? 0) > 0 && (
+                    <View style={styles.modalStat}>
+                      <Text style={styles.modalStatValue}>{enlargedItem.currency ?? '$'}{enlargedItem.costPerWear ?? enlargedItem.price}</Text>
+                      <Text style={styles.modalStatLabel}>Per Wear</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -202,16 +266,45 @@ const styles = StyleSheet.create({
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
   pieceCount: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
   sortText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '600' },
-  itemCard: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
-  itemImage: { width: 100, height: 100, backgroundColor: COLORS.surface },
-  itemInfo: { flex: 1, padding: SPACING.sm, justifyContent: 'space-between' },
-  itemName: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.textPrimary },
-  itemMeta: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
-  itemFooter: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.sm },
-  wornText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '500' },
-  wornBtn: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderColor: COLORS.border },
-  wornBtnText: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.primary },
-  wornBtnLabel: { fontSize: 9, color: COLORS.textMuted, fontWeight: '600' },
+  itemCard: {
+    flexDirection: 'row',
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  itemCardBody: { flex: 1, flexDirection: 'row' },
+  itemImage: { width: 90, height: 90, backgroundColor: COLORS.surface },
+  itemInfo: { flex: 1, paddingHorizontal: SPACING.sm, paddingVertical: 10, justifyContent: 'center', gap: 4 },
+  itemName: { fontSize: FONT_SIZE.md, fontWeight: '700' },
+  itemMeta: { fontSize: FONT_SIZE.xs },
+  itemFooter: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  wornPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.full },
+  wornPillText: { fontSize: 11, fontWeight: '600' },
+  pricePill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: BORDER_RADIUS.full, backgroundColor: '#E8F5E9' },
+  pricePillText: { fontSize: 11, fontWeight: '700', color: '#16A34A' },
+  wornBtnGroup: { width: 48, borderLeftWidth: 1, flexDirection: 'column' },
+  wornHalf: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  wornDivider: { height: 1 },
+  wornPlus: { fontSize: 22, fontWeight: '700', color: COLORS.primary },
+  wornMinus: { fontSize: 22, fontWeight: '700', color: COLORS.primary },
+  wornBtnDisabled: { color: COLORS.border },
+  // Enlarged image modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
+  modalCard: { width: '100%', backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden' },
+  modalImage: { width: '100%', height: 340 },
+  modalInfo: { padding: SPACING.md },
+  modalName: { fontSize: FONT_SIZE.lg, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 4 },
+  modalMeta: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: SPACING.md },
+  modalStats: { flexDirection: 'row', gap: SPACING.md },
+  modalStat: { alignItems: 'center' },
+  modalStatValue: { fontSize: FONT_SIZE.md, fontWeight: '800', color: COLORS.textPrimary },
+  modalStatLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
   sortMenu: { marginHorizontal: SPACING.md, marginBottom: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, overflow: 'hidden' },
   sortOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border },
   sortOptionText: { fontSize: FONT_SIZE.md, color: COLORS.textPrimary },

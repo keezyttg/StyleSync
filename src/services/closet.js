@@ -56,6 +56,15 @@ export async function incrementWornCount(userId, itemId, price, currentWorn) {
   });
 }
 
+export async function decrementWornCount(userId, itemId, price, currentWorn) {
+  const newWorn = Math.max(0, currentWorn - 1);
+  const costPerWear = price > 0 && newWorn > 0 ? Math.round((price / newWorn) * 100) / 100 : price ?? 0;
+  await updateDoc(doc(db, 'users', userId, 'closet', itemId), {
+    wornCount: newWorn,
+    costPerWear,
+  });
+}
+
 export async function deleteClothingItem(userId, itemId) {
   await deleteDoc(doc(db, 'users', userId, 'closet', itemId));
 }

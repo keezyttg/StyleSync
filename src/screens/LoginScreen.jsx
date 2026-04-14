@@ -3,9 +3,11 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signIn, signUp, resetPassword } from '../services/auth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { ONBOARDING_KEY } from './OnboardingScreen';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
@@ -24,6 +26,7 @@ export default function LoginScreen() {
         await signIn(email.trim(), password);
       } else {
         if (!username) { Alert.alert('Error', 'Username is required.'); return; }
+        await AsyncStorage.removeItem(ONBOARDING_KEY);
         await signUp(email.trim(), password, username.trim());
       }
     } catch (err) {
