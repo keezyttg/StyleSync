@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View, Text, FlatList, Image, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
-} from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { getCommunityOutfits } from '../services/outfits';
 import { joinCommunity, leaveCommunity, isJoined } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export default function CommunityDetailScreen({ navigation, route }) {
   const { community } = route.params;
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [joined, setJoined] = useState(false);
@@ -53,7 +52,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={outfits}
         keyExtractor={item => item.id}
@@ -61,26 +60,24 @@ export default function CommunityDetailScreen({ navigation, route }) {
         contentContainerStyle={styles.grid}
         ListHeaderComponent={
           <View>
-            {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { backgroundColor: colors.background }]}>
               <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Text style={styles.backText}>‹ Back</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Community info */}
             <View style={styles.heroSection}>
               <View style={styles.communityAvatar}>
                 <Text style={styles.communityAvatarText}>{community.name[0].toUpperCase()}</Text>
               </View>
-              <Text style={styles.communityName}>{community.name}</Text>
-              <Text style={styles.communityDesc}>{community.description}</Text>
+              <Text style={[styles.communityName, { color: colors.textPrimary }]}>{community.name}</Text>
+              <Text style={[styles.communityDesc, { color: colors.textSecondary }]}>{community.description}</Text>
 
               {community.labels?.length > 0 && (
                 <View style={styles.labelsRow}>
                   {community.labels.map(l => (
-                    <View key={l} style={styles.labelChip}>
-                      <Text style={styles.labelText}>{l}</Text>
+                    <View key={l} style={[styles.labelChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text style={[styles.labelText, { color: colors.textSecondary }]}>{l}</Text>
                     </View>
                   ))}
                 </View>
@@ -88,32 +85,32 @@ export default function CommunityDetailScreen({ navigation, route }) {
 
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{memberCount || '—'}</Text>
-                  <Text style={styles.statLabel}>Members</Text>
+                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>{memberCount || '—'}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Members</Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{community.postCount ?? '—'}</Text>
-                  <Text style={styles.statLabel}>Posts</Text>
+                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>{community.postCount ?? '—'}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
                 </View>
               </View>
 
               <TouchableOpacity
-                style={[styles.joinBtn, joined && styles.joinBtnJoined]}
+                style={[styles.joinBtn, joined && [styles.joinBtnJoined, { backgroundColor: colors.surface, borderColor: colors.border }]]}
                 onPress={handleJoinToggle}
               >
-                <Text style={[styles.joinBtnText, joined && styles.joinBtnTextJoined]}>
+                <Text style={[styles.joinBtnText, joined && { color: colors.textPrimary }]}>
                   {joined ? 'Joined ✓' : 'Join Community'}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.sectionTitle}>Community Outfits</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Community Outfits</Text>
           </View>
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.gridItem}
+            style={[styles.gridItem, { backgroundColor: colors.surface }]}
             activeOpacity={0.85}
             onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
           >
@@ -126,7 +123,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
         )}
         ListEmptyComponent={
           !loading && (
-            <Text style={styles.emptyText}>No outfits posted yet. Be the first!</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No outfits posted yet. Be the first!</Text>
           )
         }
         ListFooterComponent={loading ? <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} /> : null}
@@ -136,32 +133,31 @@ export default function CommunityDetailScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.white },
+  container: { flex: 1 },
   header: { paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.sm },
   backText: { fontSize: FONT_SIZE.lg, color: COLORS.primary, fontWeight: '600' },
   heroSection: { alignItems: 'center', paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg },
   communityAvatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
   communityAvatarText: { fontSize: 36, color: COLORS.white, fontWeight: '800' },
-  communityName: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center' },
-  communityDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.sm },
+  communityName: { fontSize: FONT_SIZE.xxl, fontWeight: '800', textAlign: 'center' },
+  communityDesc: { fontSize: FONT_SIZE.sm, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.sm },
   labelsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
-  labelChip: { backgroundColor: COLORS.surface, paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border },
-  labelText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '600' },
+  labelChip: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
+  labelText: { fontSize: FONT_SIZE.xs, fontWeight: '600' },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.lg },
   statItem: { alignItems: 'center', paddingHorizontal: SPACING.xl },
-  statDivider: { width: 1, height: 32, backgroundColor: COLORS.border },
-  statValue: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.textPrimary },
-  statLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
+  statDivider: { width: 1, height: 32 },
+  statValue: { fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  statLabel: { fontSize: FONT_SIZE.xs, marginTop: 2 },
   joinBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.xl, paddingVertical: 12, borderRadius: BORDER_RADIUS.full, minWidth: 180, alignItems: 'center' },
-  joinBtnJoined: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  joinBtnJoined: { borderWidth: 1 },
   joinBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
-  joinBtnTextJoined: { color: COLORS.textPrimary },
-  sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.textPrimary, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
+  sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
   grid: { paddingHorizontal: SPACING.sm, paddingBottom: 100 },
-  gridItem: { flex: 1, margin: SPACING.xs, borderRadius: BORDER_RADIUS.md, overflow: 'hidden', aspectRatio: 0.75, backgroundColor: COLORS.surface },
+  gridItem: { flex: 1, margin: SPACING.xs, borderRadius: BORDER_RADIUS.md, overflow: 'hidden', aspectRatio: 0.75 },
   gridImage: { width: '100%', height: '100%' },
   gridOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.45)', padding: SPACING.sm, flexDirection: 'row', alignItems: 'center', gap: 4 },
   starRow: { flexDirection: 'row', gap: 1 },
   gridRating: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '700', marginLeft: 2 },
-  emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 60, fontSize: FONT_SIZE.md },
+  emptyText: { textAlign: 'center', marginTop: 60, fontSize: FONT_SIZE.md },
 });

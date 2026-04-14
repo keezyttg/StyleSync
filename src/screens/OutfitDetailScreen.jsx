@@ -2,21 +2,19 @@ import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { rateOutfit, saveOutfit, deleteOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
-// ── Hanger icon ──────────────────────────────────────────────────────────────
 function HangerIcon({ filled, size = 28 }) {
   const color = filled ? COLORS.primary : 'rgba(255,255,255,0.35)';
   const hw = size;
   return (
     <View style={{ width: hw, height: hw + 4, alignItems: 'center' }}>
-      {/* Hook */}
       <View style={{
         width: hw * 0.38, height: hw * 0.24,
         borderRadius: hw * 0.19,
         borderWidth: 2.5, borderColor: color, borderBottomWidth: 0,
       }} />
-      {/* Body triangle */}
       <View style={{
         marginTop: 1,
         width: 0, height: 0,
@@ -25,7 +23,6 @@ function HangerIcon({ filled, size = 28 }) {
         borderLeftColor: 'transparent', borderRightColor: 'transparent',
         borderBottomColor: color,
       }} />
-      {/* Bottom bar */}
       <View style={{ width: hw, height: 2.5, backgroundColor: color, borderRadius: 2 }} />
     </View>
   );
@@ -34,6 +31,7 @@ function HangerIcon({ filled, size = 28 }) {
 export default function OutfitDetailScreen({ route, navigation }) {
   const { outfit } = route.params;
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [userRating, setUserRating] = useState(0);
   const [saved, setSaved] = useState(false);
   const [saveMsg, setSaveMsg] = useState(false);
@@ -82,7 +80,6 @@ export default function OutfitDetailScreen({ route, navigation }) {
     }
   }
 
-  // Bottom-up: [5,4,3,2,1] top→bottom; fill if value <= userRating
   const HANGERS = [5, 4, 3, 2, 1];
 
   return (
@@ -99,14 +96,12 @@ export default function OutfitDetailScreen({ route, navigation }) {
         </TouchableOpacity>
       )}
 
-      {/* Save toast */}
       {saveMsg && (
         <View style={styles.saveToast}>
           <Text style={styles.saveToastText}>✓ Outfit saved</Text>
         </View>
       )}
 
-      {/* Hanger rating — bottom-up (5 top, 1 bottom) */}
       <View style={styles.hangerOverlay}>
         <Text style={styles.hangerLabel}>
           {userRating > 0 ? `${userRating}/5` : 'Rate'}
@@ -118,40 +113,41 @@ export default function OutfitDetailScreen({ route, navigation }) {
         ))}
       </View>
 
-      <ScrollView style={styles.sheet}>
-        <View style={styles.sheetHandle} />
+      <ScrollView style={[styles.sheet, { backgroundColor: colors.card }]}>
+        <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.outfitUser}>{outfit.displayName || 'User'}</Text>
-            <Text style={styles.outfitMeta}>
+            <Text style={[styles.outfitUser, { color: colors.textPrimary }]}>
+              {outfit.username || outfit.displayName || 'User'}
+            </Text>
+            <Text style={[styles.outfitMeta, { color: colors.textSecondary }]}>
               {outfit.items?.length ?? 0} pieces · {outfit.tags?.[0] ?? 'Mixed'}
             </Text>
           </View>
-          <View style={styles.ratingPill}>
-            <Text style={styles.ratingPillText}>
+          <View style={[styles.ratingPill, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.ratingPillText, { color: colors.textPrimary }]}>
               {(outfit.avgRating ?? 0).toFixed(1)} ★ · {outfit.ratingCount ?? 0}
             </Text>
           </View>
         </View>
 
         {outfit.caption ? (
-          <Text style={styles.caption}>{outfit.caption}</Text>
+          <Text style={[styles.caption, { color: colors.textPrimary }]}>{outfit.caption}</Text>
         ) : null}
 
         {outfit.items && outfit.items.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.itemsRow}>
             {outfit.items.map((item, idx) => (
               <View key={idx} style={styles.itemCard}>
-                <Image source={{ uri: item.imageURL }} style={styles.itemImage} />
-                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.itemCategory}>{item.category}</Text>
+                <Image source={{ uri: item.imageURL }} style={[styles.itemImage, { backgroundColor: colors.surface }]} />
+                <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+                <Text style={[styles.itemCategory, { color: colors.textSecondary }]}>{item.category}</Text>
               </View>
             ))}
           </ScrollView>
         )}
 
-        {/* Delete above save (for owner) */}
         {isOwner && (
           <TouchableOpacity style={styles.deleteOutfitBtn} onPress={handleDelete}>
             <Text style={styles.deleteOutfitText}>🗑 Delete Outfit</Text>
@@ -159,10 +155,10 @@ export default function OutfitDetailScreen({ route, navigation }) {
         )}
 
         <TouchableOpacity
-          style={[styles.saveOutfitBtn, saved && styles.saveOutfitBtnSaved]}
+          style={[styles.saveOutfitBtn, { backgroundColor: colors.textPrimary }, saved && [styles.saveOutfitBtnSaved, { backgroundColor: colors.surface, borderColor: colors.border }]]}
           onPress={handleSave}
         >
-          <Text style={styles.saveOutfitText}>
+          <Text style={[styles.saveOutfitText, saved && { color: colors.textPrimary }]}>
             {saved ? '🔖 Saved' : '+ Save Outfit'}
           </Text>
         </TouchableOpacity>
@@ -180,27 +176,25 @@ const styles = StyleSheet.create({
   menuText: { fontSize: 16 },
   saveToast: { position: 'absolute', top: 104, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: SPACING.lg, paddingVertical: 8, borderRadius: BORDER_RADIUS.full },
   saveToastText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
-  // Hangers — right side, bottom-up
   hangerOverlay: { position: 'absolute', right: SPACING.md, bottom: '40%', alignItems: 'center', gap: 6 },
   hangerLabel: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '700', marginBottom: 2 },
   hangerBtn: { padding: 4 },
-  // Sheet
-  sheet: { flex: 1, backgroundColor: COLORS.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -24, paddingHorizontal: SPACING.md },
-  sheetHandle: { width: 40, height: 4, backgroundColor: COLORS.border, borderRadius: 2, alignSelf: 'center', marginTop: SPACING.md, marginBottom: SPACING.md },
+  sheet: { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -24, paddingHorizontal: SPACING.md },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: SPACING.md, marginBottom: SPACING.md },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  outfitUser: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.textPrimary },
-  outfitMeta: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  ratingPill: { backgroundColor: COLORS.surface, paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full },
-  ratingPillText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '600' },
-  caption: { fontSize: FONT_SIZE.md, color: COLORS.textPrimary, marginBottom: SPACING.md, lineHeight: 22 },
+  outfitUser: { fontSize: FONT_SIZE.lg, fontWeight: '700' },
+  outfitMeta: { fontSize: FONT_SIZE.sm },
+  ratingPill: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full },
+  ratingPillText: { fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  caption: { fontSize: FONT_SIZE.md, marginBottom: SPACING.md, lineHeight: 22 },
   itemsRow: { marginBottom: SPACING.md },
   itemCard: { width: 90, marginRight: SPACING.sm },
-  itemImage: { width: 90, height: 90, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.surface },
-  itemName: { fontSize: FONT_SIZE.xs, fontWeight: '600', marginTop: 4, color: COLORS.textPrimary },
-  itemCategory: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
+  itemImage: { width: 90, height: 90, borderRadius: BORDER_RADIUS.sm },
+  itemName: { fontSize: FONT_SIZE.xs, fontWeight: '600', marginTop: 4 },
+  itemCategory: { fontSize: FONT_SIZE.xs },
   deleteOutfitBtn: { borderWidth: 1, borderColor: COLORS.error, borderRadius: BORDER_RADIUS.md, paddingVertical: 12, alignItems: 'center', marginBottom: SPACING.sm },
   deleteOutfitText: { color: COLORS.error, fontSize: FONT_SIZE.md, fontWeight: '600' },
-  saveOutfitBtn: { backgroundColor: COLORS.textPrimary, borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.xl },
-  saveOutfitBtnSaved: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  saveOutfitBtn: { borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.xl },
+  saveOutfitBtnSaved: { borderWidth: 1 },
   saveOutfitText: { color: COLORS.white, fontSize: FONT_SIZE.md, fontWeight: '700' },
 });

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
 import ClosetScreen from '../screens/ClosetScreen';
@@ -25,79 +26,97 @@ import { COLORS } from '../constants/theme';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function TabBarIcon({ icon, focused }) {
+const TAB_CONFIG = [
+  { name: 'CameraTab', icon: '📷', label: 'Camera', isAction: true },
+  { name: 'Closet',    icon: '👗', label: 'Closet' },
+  { name: 'Feed',      icon: '🏠', label: 'Home' },
+  { name: 'Discover',  icon: '🔍', label: 'Explore' },
+  { name: 'Profile',   icon: '👤', label: 'Me' },
+];
+
+function CustomTabBar({ state, navigation }) {
+  const { colors, isDark } = useTheme();
+
   return (
-    <View style={tabStyles.iconContainer}>
-      <Text style={[tabStyles.icon, focused && tabStyles.iconFocused]}>{icon}</Text>
+    <View style={tabStyles.safeArea}>
+      <View style={[
+        tabStyles.bar,
+        {
+          backgroundColor: colors.card,
+          shadowColor: isDark ? '#000' : '#6B21A8',
+          borderColor: colors.border,
+        },
+      ]}>
+        {TAB_CONFIG.map((tab, index) => {
+          const route = state.routes[index];
+          const focused = state.index === index && !tab.isAction;
+
+          const onPress = () => {
+            if (tab.isAction) {
+              navigation.navigate('Camera');
+              return;
+            }
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route?.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(tab.name);
+            }
+          };
+
+          if (tab.isAction) {
+            return (
+              <TouchableOpacity
+                key={tab.name}
+                style={tabStyles.tabItem}
+                onPress={onPress}
+                activeOpacity={0.7}
+              >
+                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>
+                  {tab.icon}
+                </Text>
+              </TouchableOpacity>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              key={tab.name}
+              style={tabStyles.tabItem}
+              onPress={onPress}
+              activeOpacity={0.7}
+            >
+              {focused ? (
+                <View style={tabStyles.pill}>
+                  <Text style={tabStyles.pillIcon}>{tab.icon}</Text>
+                </View>
+              ) : (
+                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>
+                  {tab.icon}
+                </Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
-
-function CenterFeedButton({ onPress }) {
-  return (
-    <TouchableOpacity style={tabStyles.centerBtn} onPress={onPress} activeOpacity={0.85}>
-      <View style={tabStyles.centerBtnInner}>
-        <Text style={tabStyles.centerBtnIcon}>⌂</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function MainTabs({ navigation }) {
+function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: tabStyles.tabBar,
-        tabBarShowLabel: false,
-      }}
+      initialRouteName="Feed"
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen
-        name="CameraTab"
-        component={FeedScreen}
-        options={{
-          tabBarButton: () => (
-            <TouchableOpacity
-              style={tabStyles.regularTabBtn}
-              onPress={() => navigation.navigate('Camera')}
-              activeOpacity={0.7}
-            >
-              <TabBarIcon icon="📷" focused={false} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Closet"
-        component={ClosetScreen}
-        options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="👗" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Feed"
-        component={FeedScreen}
-        options={{
-          tabBarButton: (props) => (
-            <CenterFeedButton onPress={props.onPress} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Discover"
-        component={DiscoverScreen}
-        options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="🔍" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          tabBarIcon: ({ focused }) => <TabBarIcon icon="👤" focused={focused} />,
-        }}
-      />
+      <Tab.Screen name="CameraTab" component={FeedScreen} />
+      <Tab.Screen name="Closet"    component={ClosetScreen} />
+      <Tab.Screen name="Feed"      component={FeedScreen} />
+      <Tab.Screen name="Discover"  component={DiscoverScreen} />
+      <Tab.Screen name="Profile"   component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -113,23 +132,22 @@ function AuthStack() {
 function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Main" component={MainTabs} />
-      <Stack.Screen name="OutfitDetail" component={OutfitDetailScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="Post" component={PostScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="BuildOutfit" component={BuildOutfitScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="AddItem" component={AddItemScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="Main"            component={MainTabs} />
+      <Stack.Screen name="OutfitDetail"    component={OutfitDetailScreen}    options={{ presentation: 'modal' }} />
+      <Stack.Screen name="Post"            component={PostScreen}            options={{ presentation: 'modal' }} />
+      <Stack.Screen name="BuildOutfit"     component={BuildOutfitScreen}     options={{ presentation: 'modal' }} />
+      <Stack.Screen name="AddItem"         component={AddItemScreen}         options={{ presentation: 'modal' }} />
       <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} />
-      <Stack.Screen name="Camera" component={CameraScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+      <Stack.Screen name="Camera"          component={CameraScreen}          options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="CreateCommunity" component={CreateCommunityScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+      <Stack.Screen name="EditProfile"     component={EditProfileScreen}     options={{ presentation: 'modal' }} />
+      <Stack.Screen name="UserProfile"     component={UserProfileScreen} />
     </Stack.Navigator>
   );
 }
 
 export default function AppNavigator() {
   const { user, loading } = useAuth();
-
   if (loading) return null;
 
   return (
@@ -140,31 +158,49 @@ export default function AppNavigator() {
 }
 
 const tabStyles = StyleSheet.create({
-  tabBar: {
-    height: 80,
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: 16,
+  safeArea: {
+    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+    paddingHorizontal: 16,
     paddingTop: 8,
   },
-  iconContainer: { alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 26, color: COLORS.textMuted },
-  iconFocused: { color: COLORS.primary },
-  regularTabBtn: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  centerBtn: { top: -20, justifyContent: 'center', alignItems: 'center' },
-  centerBtnInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
+  bar: {
+    flexDirection: 'row',
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    // Shadow
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
   },
-  centerBtnIcon: { fontSize: 26, color: COLORS.white },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 24,
+    gap: 5,
+  },
+  pillIcon: {
+    fontSize: 17,
+  },
+  pillLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.1,
+  },
+  inactiveIcon: {
+    fontSize: 22,
+  },
 });

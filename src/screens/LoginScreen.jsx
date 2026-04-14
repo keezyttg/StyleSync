@@ -4,9 +4,11 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { signIn, signUp, resetPassword } from '../services/auth';
+import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
   const [tab, setTab] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,19 +54,19 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.logoRow}>
-          <Text style={styles.logoBlack}>Style</Text>
+          <Text style={[styles.logoBlack, { color: colors.textPrimary }]}>Style</Text>
           <Text style={styles.logoMagenta}>Sync</Text>
         </View>
-        <Text style={styles.headline}>Get Started now</Text>
-        <Text style={styles.subheadline}>Create an account or log in to explore about our app</Text>
+        <Text style={[styles.headline, { color: colors.textPrimary }]}>Get Started now</Text>
+        <Text style={[styles.subheadline, { color: colors.textSecondary }]}>Create an account or log in to explore about our app</Text>
 
-        <View style={styles.tabRow}>
+        <View style={[styles.tabRow, { backgroundColor: colors.surface }]}>
           {['login', 'signup'].map(t => (
-            <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+            <TouchableOpacity key={t} style={[styles.tab, tab === t && [styles.tabActive, { backgroundColor: colors.card }]]} onPress={() => setTab(t)}>
+              <Text style={[styles.tabText, { color: colors.textSecondary }, tab === t && { color: colors.textPrimary, fontWeight: '700' }]}>
                 {t === 'login' ? 'Log In' : 'Sign Up'}
               </Text>
             </TouchableOpacity>
@@ -73,20 +75,20 @@ export default function LoginScreen() {
 
         {tab === 'signup' && (
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Username</Text>
-            <TextInput style={styles.input} placeholder="@yourhandle" value={username} onChangeText={setUsername} autoCapitalize="none" />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Username</Text>
+            <TextInput style={[styles.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.border }]} placeholder="@yourhandle" placeholderTextColor={colors.textMuted} value={username} onChangeText={setUsername} autoCapitalize="none" />
           </View>
         )}
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput style={styles.input} placeholder="you@email.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Email</Text>
+          <TextInput style={[styles.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.border }]} placeholder="you@email.com" placeholderTextColor={colors.textMuted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.passwordRow}>
-            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="••••••••" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
+          <View style={[styles.passwordRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TextInput style={[styles.passwordInput, { color: colors.textPrimary }]} placeholder="••••••••" placeholderTextColor={colors.textMuted} value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
             <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)}>
               <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁'}</Text>
             </TouchableOpacity>
@@ -95,7 +97,7 @@ export default function LoginScreen() {
 
         {tab === 'login' && (
           <View style={styles.rememberRow}>
-            <Text style={styles.textSecondary}>Remember me</Text>
+            <Text style={[styles.textSecondary, { color: colors.textSecondary }]}>Remember me</Text>
             <TouchableOpacity onPress={handleForgotPassword}>
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
@@ -109,14 +111,14 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <View style={styles.orRow}>
-          <View style={styles.divider} />
-          <Text style={styles.orText}>Or login with</Text>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Text style={[styles.orText, { color: colors.textSecondary }]}>Or login with</Text>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
         </View>
 
         <View style={styles.socialRow}>
           {['🇬', '📘', '🍎', '📱'].map((icon, i) => (
-            <TouchableOpacity key={i} style={styles.socialBtn}>
+            <TouchableOpacity key={i} style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}>
               <Text style={styles.socialIcon}>{icon}</Text>
             </TouchableOpacity>
           ))}
@@ -127,33 +129,33 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.white },
+  container: { flex: 1 },
   scroll: { paddingHorizontal: SPACING.xl, paddingTop: 80, paddingBottom: 40 },
   logoRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: SPACING.sm },
-  logoBlack: { fontSize: 32, fontWeight: '900', color: COLORS.textPrimary },
+  logoBlack: { fontSize: 32, fontWeight: '900' },
   logoMagenta: { fontSize: 32, fontStyle: 'italic', color: COLORS.primary },
   headline: { fontSize: FONT_SIZE.xxl, fontWeight: '800', textAlign: 'center', marginBottom: SPACING.xs },
-  subheadline: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', marginBottom: SPACING.xl },
-  tabRow: { flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.md, padding: 4, marginBottom: SPACING.lg },
+  subheadline: { fontSize: FONT_SIZE.sm, textAlign: 'center', marginBottom: SPACING.xl },
+  tabRow: { flexDirection: 'row', borderRadius: BORDER_RADIUS.md, padding: 4, marginBottom: SPACING.lg },
   tab: { flex: 1, paddingVertical: 10, borderRadius: BORDER_RADIUS.sm, alignItems: 'center' },
-  tabActive: { backgroundColor: COLORS.white, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  tabText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '500' },
-  tabTextActive: { color: COLORS.textPrimary, fontWeight: '700' },
+  tabActive: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+  tabText: { fontSize: FONT_SIZE.md, fontWeight: '500' },
   inputGroup: { marginBottom: SPACING.md },
-  label: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT_SIZE.md, color: COLORS.textPrimary },
-  passwordRow: { flexDirection: 'row', alignItems: 'center' },
+  label: { fontSize: FONT_SIZE.sm, marginBottom: 6 },
+  input: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT_SIZE.md },
+  passwordRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: BORDER_RADIUS.md },
+  passwordInput: { flex: 1, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT_SIZE.md },
   eyeBtn: { padding: SPACING.sm, marginLeft: SPACING.xs },
   eyeText: { fontSize: 18 },
   rememberRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.lg },
-  textSecondary: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
+  textSecondary: { fontSize: FONT_SIZE.sm },
   forgotText: { color: COLORS.primary, fontSize: FONT_SIZE.sm, fontWeight: '600' },
   primaryBtn: { backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.full, paddingVertical: 16, alignItems: 'center', marginBottom: SPACING.lg },
   primaryBtnText: { color: COLORS.white, fontSize: FONT_SIZE.lg, fontWeight: '700' },
   orRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.lg },
-  divider: { flex: 1, height: 1, backgroundColor: COLORS.border },
-  orText: { marginHorizontal: SPACING.sm, color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
+  divider: { flex: 1, height: 1 },
+  orText: { marginHorizontal: SPACING.sm, fontSize: FONT_SIZE.sm },
   socialRow: { flexDirection: 'row', justifyContent: 'center', gap: SPACING.md },
-  socialBtn: { width: 56, height: 56, borderWidth: 1, borderColor: COLORS.border, borderRadius: BORDER_RADIUS.md, justifyContent: 'center', alignItems: 'center' },
+  socialBtn: { width: 56, height: 56, borderWidth: 1, borderRadius: BORDER_RADIUS.md, justifyContent: 'center', alignItems: 'center' },
   socialIcon: { fontSize: 22 },
 });
