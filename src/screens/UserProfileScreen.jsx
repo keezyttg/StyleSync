@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+
+const ITEM_SIZE = (Dimensions.get('window').width - 4) / 2;
 import { getUserProfile, followUser, unfollowUser, getFollowing } from '../services/auth';
 import { getUserOutfits } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
@@ -175,7 +177,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: FONT_SIZE.xl, fontWeight: '800' },
   statLabel: { fontSize: FONT_SIZE.xs, marginTop: 2 },
   sectionLabel: { fontSize: FONT_SIZE.sm, fontWeight: '600', paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
-  gridItem: { flex: 1, margin: 2, aspectRatio: 1 },
+  gridItem: { width: ITEM_SIZE, margin: 2, aspectRatio: 1 },
   gridImage: { width: '100%', height: '100%', borderRadius: BORDER_RADIUS.sm },
   emptyText: { textAlign: 'center', marginTop: 40, fontSize: FONT_SIZE.md },
 });

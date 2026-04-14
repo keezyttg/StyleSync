@@ -76,7 +76,7 @@ export default function CameraScreen({ navigation }) {
 
   function usePhoto() {
     const uri = preview;
-    navigation.navigate('Post', { imageUri: uri });
+    navigation.replace('Post', { imageUri: uri });
   }
 
   if (!permission) return <View style={styles.bg} />;

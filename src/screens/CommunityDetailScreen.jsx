@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+
+const ITEM_SIZE = (Dimensions.get('window').width - 32) / 2; // 8px padding × 2 sides + 4px margin × 4 edges
 import { getCommunityOutfits } from '../services/outfits';
 import { getCommunity, joinCommunity, leaveCommunity, isJoined } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
@@ -165,7 +167,7 @@ const styles = StyleSheet.create({
   joinBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
   sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
   grid: { paddingHorizontal: SPACING.sm, paddingBottom: 100 },
-  gridItem: { flex: 1, margin: SPACING.xs, borderRadius: BORDER_RADIUS.md, overflow: 'hidden', aspectRatio: 0.75 },
+  gridItem: { width: ITEM_SIZE, margin: SPACING.xs, borderRadius: BORDER_RADIUS.md, overflow: 'hidden', aspectRatio: 0.75 },
   gridImage: { width: '100%', height: '100%' },
   gridOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.45)', padding: SPACING.sm, flexDirection: 'row', alignItems: 'center', gap: 4 },
   starRow: { flexDirection: 'row', gap: 1 },

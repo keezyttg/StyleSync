@@ -25,7 +25,7 @@ const TRENDING_FILTERS = [
 ];
 
 export default function FeedScreen({ navigation }) {
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { user } = useAuth();
   const { colors } = useTheme();
   const [tab, setTab] = useState('Trending');
@@ -150,7 +150,8 @@ export default function FeedScreen({ navigation }) {
     const isFollowingUser = following.has(item.userId);
     const isOwn = user?.uid === item.userId;
     const displayName = item.username || item.displayName || 'User';
-    const imageHeight = screenWidth * 1.25;
+    // Keep image tall but ensure the footer (rating) is always visible on screen
+    const imageHeight = Math.min(screenWidth * 1.25, screenHeight - CARD_CHROME - 220);
 
     return (
       <TouchableOpacity
@@ -289,7 +290,7 @@ export default function FeedScreen({ navigation }) {
           keyExtractor={item => item.id}
           renderItem={({ item }) => <OutfitCard item={item} />}
           contentContainerStyle={{ gap: 1 }}
-          snapToInterval={screenWidth * 1.25 + CARD_CHROME}
+          snapToInterval={Math.min(screenWidth * 1.25, screenHeight - CARD_CHROME - 220) + CARD_CHROME}
           decelerationRate="fast"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
           ListEmptyComponent={

@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Switch } from 'react-native';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Switch, Dimensions } from 'react-native';
+
+const ITEM_SIZE = (Dimensions.get('window').width - 4) / 2;
 import { useFocusEffect } from '@react-navigation/native';
 import { getUserProfile, logOut } from '../services/auth';
 import { getUserOutfits, deleteOutfit, getSavedOutfits, unsaveOutfit } from '../services/outfits';
@@ -227,7 +229,7 @@ const styles = StyleSheet.create({
   tabBtn: { marginRight: SPACING.xl, paddingBottom: SPACING.sm },
   tabText: { fontSize: FONT_SIZE.md, fontWeight: '500' },
   tabUnderline: { height: 2, borderRadius: 1, marginTop: 4 },
-  gridItem: { flex: 1, margin: 2, aspectRatio: 1 },
+  gridItem: { width: ITEM_SIZE, margin: 2, aspectRatio: 1 },
   gridImage: { width: '100%', height: '100%', borderRadius: BORDER_RADIUS.sm },
   gridDeleteHint: { position: 'absolute', bottom: 4, left: 0, right: 0, alignItems: 'center' },
   gridDeleteHintText: { fontSize: 9, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
