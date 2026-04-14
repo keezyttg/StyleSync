@@ -109,13 +109,13 @@ export default function ClosetScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>My Closet</Text>
         <TouchableOpacity
-          style={styles.addBtn}
+          style={[styles.addBtn, { borderColor: colors.border }]}
           onPress={() => navigation.navigate('AddItem')}
           accessibilityRole="button"
           accessibilityLabel="Add item"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={styles.addBtnText}>+ Add Item</Text>
+          <Text style={[styles.addBtnText, { color: colors.textPrimary }]}>+ Add Item</Text>
         </TouchableOpacity>
       </View>
 

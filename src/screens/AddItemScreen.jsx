@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Image,
+  ScrollView, Alert, ActivityIndicator, Image, Modal, FlatList,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadItemImage, addClothingItem } from '../services/closet';
+import { autoTagImage } from '../services/autotag';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '6', '7', '8', '9', '10', '11', '12'];
 const STYLE_TAGS = ['Casual', 'Formal', 'Streetwear', 'Vintage', 'Minimalist', 'Athleisure', 'Business Casual'];
+
+const SIZE_SECTIONS = [
+  { title: 'Clothing', sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+  { title: 'Pants (waist)', sizes: ['28', '30', '32', '34', '36', '38', '40'] },
+  { title: 'Shoes (US)', sizes: ['5', '6', '7', '8', '9', '10', '11', '12', '13'] },
+];
 
 export default function AddItemScreen({ navigation }) {
   const { user } = useAuth();
@@ -25,6 +31,8 @@ export default function AddItemScreen({ navigation }) {
   const [selectedTags, setSelectedTags] = useState([]);
   const [currency, setCurrency] = useState('$');
   const [loading, setLoading] = useState(false);
+  const [tagging, setTagging] = useState(false);
+  const [showSizePicker, setShowSizePicker] = useState(false);
 
   function autoSuggestTags(text) {
     const lower = text.toLowerCase();
@@ -38,18 +46,40 @@ export default function AddItemScreen({ navigation }) {
     setSelectedTags(prev => [...new Set([...prev, ...suggestions])]);
   }
 
+  async function runAutoTag(uri) {
+    setTagging(true);
+    try {
+      const tags = await autoTagImage(uri);
+      if (tags.length > 0) {
+        setSelectedTags(prev => [...new Set([...prev, ...tags])]);
+      }
+    } catch {
+      // silently skip — autotag is best-effort
+    } finally {
+      setTagging(false);
+    }
+  }
+
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'We need access to your photos.'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [3, 4], quality: 0.8 });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
+      runAutoTag(uri);
+    }
   }
 
   async function takePhoto() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'We need camera access.'); return; }
     const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [3, 4], quality: 0.8 });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
+      runAutoTag(uri);
+    }
   }
 
   function toggleTag(tag) {
@@ -138,15 +168,46 @@ export default function AddItemScreen({ navigation }) {
         />
 
         <Text style={[styles.label, { color: colors.textPrimary }]}>Size</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sizeScroll}>
-          <View style={styles.chipRow}>
-            {SIZES.map(s => (
-              <TouchableOpacity key={s} style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }, size === s && styles.chipActive]} onPress={() => setSize(s)}>
-                <Text style={[styles.chipText, { color: colors.textPrimary }, size === s && styles.chipTextActive]}>{s}</Text>
-              </TouchableOpacity>
-            ))}
+        <TouchableOpacity
+          style={[styles.sizeDropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => setShowSizePicker(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.sizeDropdownText, { color: size ? colors.textPrimary : colors.textMuted }]}>
+            {size || 'Select a size'}
+          </Text>
+          <Text style={[styles.sizeDropdownChevron, { color: colors.textMuted }]}>▾</Text>
+        </TouchableOpacity>
+
+        <Modal visible={showSizePicker} transparent animationType="slide" onRequestClose={() => setShowSizePicker(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSizePicker(false)} />
+          <View style={[styles.sizeSheet, { backgroundColor: colors.card }]}>
+            <View style={[styles.sizeSheetHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.sizeSheetTitle, { color: colors.textPrimary }]}>Select Size</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              {SIZE_SECTIONS.map(section => (
+                <View key={section.title}>
+                  <Text style={[styles.sizeSectionLabel, { color: colors.textSecondary, borderBottomColor: colors.border }]}>
+                    {section.title}
+                  </Text>
+                  {section.sizes.map(s => (
+                    <TouchableOpacity
+                      key={s}
+                      style={[styles.sizeRow, { borderBottomColor: colors.border }, size === s && { backgroundColor: colors.surface }]}
+                      onPress={() => { setSize(s); setShowSizePicker(false); }}
+                      activeOpacity={0.6}
+                    >
+                      <Text style={[styles.sizeRowText, { color: colors.textPrimary }, size === s && { color: COLORS.primary, fontWeight: '700' }]}>
+                        {s}
+                      </Text>
+                      {size === s && <Text style={styles.sizeCheck}>✓</Text>}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
           </View>
-        </ScrollView>
+        </Modal>
 
         <Text style={[styles.label, { color: colors.textPrimary }]}>Price Paid</Text>
         <View style={styles.priceRow}>
@@ -172,7 +233,15 @@ export default function AddItemScreen({ navigation }) {
           maxLength={8}
         />
 
-        <Text style={[styles.label, { color: colors.textPrimary }]}>Style Tags</Text>
+        <View style={styles.labelRow}>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Style Tags</Text>
+          {tagging && (
+            <View style={styles.taggingBadge}>
+              <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.taggingText}>AI tagging…</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.chipRow}>
           {STYLE_TAGS.map(tag => (
             <TouchableOpacity key={tag} style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }, selectedTags.includes(tag) && styles.chipActive]} onPress={() => toggleTag(tag)}>
@@ -207,12 +276,25 @@ const styles = StyleSheet.create({
   cameraAltText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '600' },
   label: { fontSize: FONT_SIZE.sm, fontWeight: '600', marginBottom: SPACING.sm, marginTop: SPACING.md },
   input: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT_SIZE.md },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  taggingBadge: { flexDirection: 'row', alignItems: 'center' },
+  taggingText: { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   chip: { paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
   chipActive: { backgroundColor: COLORS.textPrimary, borderColor: COLORS.textPrimary },
   chipText: { fontSize: FONT_SIZE.sm, fontWeight: '500' },
   chipTextActive: { color: COLORS.white, fontWeight: '700' },
-  sizeScroll: { marginBottom: SPACING.xs },
+  sizeDropdown: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sizeDropdownText: { fontSize: FONT_SIZE.md },
+  sizeDropdownChevron: { fontSize: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sizeSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: SPACING.sm, maxHeight: '65%' },
+  sizeSheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: SPACING.md },
+  sizeSheetTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
+  sizeSectionLabel: { fontSize: FONT_SIZE.xs, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', paddingHorizontal: SPACING.md, paddingVertical: 10, borderBottomWidth: 1 },
+  sizeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 16, borderBottomWidth: 1 },
+  sizeRowText: { fontSize: FONT_SIZE.md },
+  sizeCheck: { fontSize: FONT_SIZE.md, color: COLORS.primary, fontWeight: '700' },
   priceRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
   currencyBtn: { width: 40, height: 40, borderRadius: BORDER_RADIUS.full, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   currencyBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },

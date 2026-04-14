@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Switch } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getUserProfile, logOut } from '../services/auth';
-import { getUserOutfits, deleteOutfit } from '../services/outfits';
+import { getUserOutfits, deleteOutfit, getSavedOutfits, unsaveOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
@@ -12,6 +12,7 @@ export default function ProfileScreen({ navigation }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [outfits, setOutfits] = useState([]);
+  const [savedOutfits, setSavedOutfits] = useState([]);
   const [tab, setTab] = useState('My Outfits');
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -20,10 +21,11 @@ export default function ProfileScreen({ navigation }) {
     useCallback(() => {
       if (!user) { setLoading(false); return; }
       setLoading(true);
-      Promise.all([getUserProfile(user.uid), getUserOutfits(user.uid)])
-        .then(([prof, outs]) => {
+      Promise.all([getUserProfile(user.uid), getUserOutfits(user.uid), getSavedOutfits(user.uid)])
+        .then(([prof, outs, saved]) => {
           setProfile(prof);
           setOutfits(outs);
+          setSavedOutfits(saved);
         })
         .catch(err => console.log('Profile load error:', err))
         .finally(() => setLoading(false));
@@ -49,7 +51,7 @@ export default function ProfileScreen({ navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
-        data={tab === 'My Outfits' ? outfits : []}
+        data={tab === 'My Outfits' ? outfits : savedOutfits}
         keyExtractor={item => item.id}
         numColumns={2}
         ListHeaderComponent={
@@ -59,10 +61,10 @@ export default function ProfileScreen({ navigation }) {
               <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Profile</Text>
               <View style={styles.headerActions}>
                 <TouchableOpacity
-                  style={styles.editBtn}
+                  style={[styles.editBtn, { borderColor: colors.textPrimary }]}
                   onPress={() => navigation.navigate('EditProfile', { profile })}
                 >
-                  <Text style={styles.editBtnText}>Edit</Text>
+                  <Text style={[styles.editBtnText, { color: colors.textPrimary }]}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.settingsBtn}
@@ -143,25 +145,44 @@ export default function ProfileScreen({ navigation }) {
             style={styles.gridItem}
             onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
             onLongPress={() => {
-              Alert.alert('Delete Outfit', 'Remove this outfit permanently?', [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete', style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await deleteOutfit(item.id, user.uid);
-                      setOutfits(prev => prev.filter(o => o.id !== item.id));
-                    } catch (err) {
-                      Alert.alert('Error', err.message || 'Could not delete.');
-                    }
+              if (tab === 'Saved') {
+                Alert.alert('Remove from Saved', 'Unsave this outfit?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Remove', style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await unsaveOutfit(user.uid, item.id);
+                        setSavedOutfits(prev => prev.filter(o => o.id !== item.id));
+                      } catch (err) {
+                        Alert.alert('Error', err.message || 'Could not remove.');
+                      }
+                    },
                   },
-                },
-              ]);
+                ]);
+              } else {
+                Alert.alert('Delete Outfit', 'Remove this outfit permanently?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete', style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await deleteOutfit(item.id, user.uid);
+                        setOutfits(prev => prev.filter(o => o.id !== item.id));
+                      } catch (err) {
+                        Alert.alert('Error', err.message || 'Could not delete.');
+                      }
+                    },
+                  },
+                ]);
+              }
             }}
           >
             <Image source={{ uri: item.imageURL }} style={styles.gridImage} resizeMode="cover" />
             <View style={styles.gridDeleteHint}>
-              <Text style={styles.gridDeleteHintText}>Hold to delete</Text>
+              <Text style={styles.gridDeleteHintText}>
+                {tab === 'Saved' ? 'Hold to unsave' : 'Hold to delete'}
+              </Text>
             </View>
           </TouchableOpacity>
         )}
@@ -182,7 +203,7 @@ const styles = StyleSheet.create({
   profileHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.md },
   pageTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  editBtn: { borderWidth: 1, borderColor: '#E6E6EA', borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 6 },
+  editBtn: { borderWidth: 1, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 6 },
   editBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '600' },
   settingsBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   settingsIcon: { fontSize: 20 },

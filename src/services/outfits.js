@@ -2,6 +2,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
   doc,
   deleteDoc,
   query,
@@ -48,6 +49,57 @@ export async function getTrendingOutfits(limitCount = 20) {
   return docs
     .sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0))
     .slice(0, limitCount);
+}
+
+// score = (avgRating * ratingCount + saves * 0.5) / (hoursOld + 2)^1.5
+function hotScore(doc) {
+  const now = Date.now() / 1000;
+  const created = doc.createdAt?.seconds ?? now;
+  const hoursOld = Math.max(0, (now - created) / 3600);
+  const engagement = (doc.avgRating ?? 0) * (doc.ratingCount ?? 0) + (doc.saves ?? 0) * 0.5;
+  return engagement / Math.pow(hoursOld + 2, 1.5);
+}
+
+export async function getOutfitsByFilter(filter = 'Hot', limitCount = 30) {
+  const q = query(collection(db, 'outfits'), limit(limitCount * 3));
+  const snap = await getDocs(q);
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  let sorted;
+  switch (filter) {
+    case 'New':
+      sorted = docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+      break;
+    case 'Top':
+      sorted = docs.sort((a, b) => {
+        const ratingDiff = (b.avgRating ?? 0) - (a.avgRating ?? 0);
+        return ratingDiff !== 0 ? ratingDiff : (b.ratingCount ?? 0) - (a.ratingCount ?? 0);
+      });
+      break;
+    case 'Rising': {
+      const sevenDaysAgo = Date.now() / 1000 - 7 * 24 * 3600;
+      sorted = docs
+        .filter(d => (d.createdAt?.seconds ?? 0) > sevenDaysAgo)
+        .sort((a, b) => ((b.ratingCount ?? 0) + (b.saves ?? 0)) - ((a.ratingCount ?? 0) + (a.saves ?? 0)));
+      break;
+    }
+    case 'Controversial':
+      // High rating count but low average — lots of opinions, divided results
+      sorted = docs
+        .filter(d => (d.ratingCount ?? 0) >= 2)
+        .sort((a, b) => {
+          const scoreA = (a.ratingCount ?? 0) / Math.pow((a.avgRating ?? 0) + 1, 2);
+          const scoreB = (b.ratingCount ?? 0) / Math.pow((b.avgRating ?? 0) + 1, 2);
+          return scoreB - scoreA;
+        });
+      break;
+    case 'Hot':
+    default:
+      sorted = docs.sort((a, b) => hotScore(b) - hotScore(a));
+      break;
+  }
+
+  return sorted.slice(0, limitCount);
 }
 
 export async function getCommunityOutfits(limitCount = 20) {
@@ -111,6 +163,22 @@ export async function deleteOutfit(outfitId, userId) {
   } catch {
     // user doc may not exist for seeded/demo posts — ignore
   }
+}
+
+export async function getSavedOutfits(userId) {
+  const savedSnap = await getDocs(collection(db, 'users', userId, 'saved'));
+  const outfitIds = savedSnap.docs.map(d => d.data().outfitId).filter(Boolean);
+  if (outfitIds.length === 0) return [];
+  const outfits = await Promise.all(
+    outfitIds.map(id => getDoc(doc(db, 'outfits', id)).then(s => s.exists() ? { id: s.id, ...s.data() } : null))
+  );
+  return outfits.filter(Boolean);
+}
+
+export async function unsaveOutfit(userId, outfitId) {
+  const savedSnap = await getDocs(collection(db, 'users', userId, 'saved'));
+  const match = savedSnap.docs.find(d => d.data().outfitId === outfitId);
+  if (match) await deleteDoc(match.ref);
 }
 
 export async function saveOutfit(userId, outfitId) {

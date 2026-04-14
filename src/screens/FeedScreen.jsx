@@ -4,7 +4,7 @@ import {
   StyleSheet, RefreshControl, useWindowDimensions, ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getTrendingOutfits, getCommunityOutfits } from '../services/outfits';
+import { getOutfitsByFilter, getCommunityOutfits } from '../services/outfits';
 import { getFollowing, followUser, unfollowUser, getUserProfile } from '../services/auth';
 import { getUserCommunities } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
@@ -16,11 +16,20 @@ import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const COMMUNITIES_CACHE_KEY = 'user_communities_cache';
 
+const TRENDING_FILTERS = [
+  { key: 'Hot',           icon: '🔥' },
+  { key: 'New',           icon: '✨' },
+  { key: 'Top',           icon: '⭐' },
+  { key: 'Rising',        icon: '📈' },
+  { key: 'Controversial', icon: '⚡' },
+];
+
 export default function FeedScreen({ navigation }) {
   const { width: screenWidth } = useWindowDimensions();
   const { user } = useAuth();
   const { colors } = useTheme();
   const [tab, setTab] = useState('Trending');
+  const [trendingFilter, setTrendingFilter] = useState('Hot');
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,7 +68,9 @@ export default function FeedScreen({ navigation }) {
     setLoading(true);
     setError(null);
     try {
-      const data = tab === 'Trending' ? await getTrendingOutfits() : await getCommunityOutfits();
+      const data = tab === 'Trending'
+        ? await getOutfitsByFilter(trendingFilter)
+        : await getCommunityOutfits();
 
       const missingIds = [...new Set(
         data.filter(o => !o.username && o.userId).map(o => o.userId)
@@ -81,7 +92,7 @@ export default function FeedScreen({ navigation }) {
       setError('Could not load outfits. Check your connection.');
     }
     setLoading(false);
-  }, [tab]);
+  }, [tab, trendingFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -215,9 +226,29 @@ export default function FeedScreen({ navigation }) {
       </View>
 
       {tab === 'Trending' && (
-        <View style={styles.sectionLabel}>
-          <Text style={[styles.sectionText, { color: colors.textSecondary }]}>Top rated this week</Text>
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.filterBar, { borderBottomColor: colors.border }]}
+          contentContainerStyle={styles.filterBarContent}
+        >
+          {TRENDING_FILTERS.map(f => (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.filterPill, trendingFilter === f.key && styles.filterPillActive]}
+              onPress={() => setTrendingFilter(f.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.filterPillIcon}>{f.icon}</Text>
+              <Text style={[
+                styles.filterPillLabel,
+                { color: trendingFilter === f.key ? COLORS.white : colors.textSecondary },
+              ]}>
+                {f.key}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       )}
 
       {tab === 'Community' && myCommunities.length > 0 && (
@@ -293,8 +324,12 @@ const styles = StyleSheet.create({
   tabBtn: { marginRight: SPACING.xl, paddingBottom: SPACING.sm },
   tabText: { fontSize: FONT_SIZE.md, fontWeight: '500' },
   tabUnderline: { height: 2, borderRadius: 1, marginTop: 4 },
-  sectionLabel: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
-  sectionText: { fontSize: FONT_SIZE.sm },
+  filterBar: { flexGrow: 0, flexShrink: 0, borderBottomWidth: 1 },
+  filterBarContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, alignItems: 'center' },
+  filterPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BORDER_RADIUS.full, backgroundColor: 'transparent' },
+  filterPillActive: { backgroundColor: COLORS.primary },
+  filterPillIcon: { fontSize: 13 },
+  filterPillLabel: { fontSize: FONT_SIZE.sm, fontWeight: '700' },
   filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm },
   filterChip: { paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },

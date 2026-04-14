@@ -5,13 +5,10 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getCommunities, isJoined, joinCommunity, leaveCommunity } from '../services/communities';
-import { getTrendingOutfits } from '../services/outfits';
 import { searchUsers, followUser, unfollowUser, getFollowing } from '../services/auth';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
-
-const STYLE_TAGS = ['All', 'Streetwear', 'Casual', 'Minimalist', 'Formal', 'Vintage', 'Summer', 'Y2K', 'Athleisure'];
 
 const DEFAULT_COMMUNITIES = [
   { id: '1', name: 'NYC Fashion',   description: 'Fashion style from NYC',           labels: ['Streetwear'] },
@@ -27,12 +24,7 @@ const DEFAULT_COMMUNITIES = [
 export default function DiscoverScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const [tab, setTab] = useState('Explore');
-
-  // ── Explore state ─────────────────────────────────────────────────────────
-  const [outfits, setOutfits] = useState([]);
-  const [outfitsLoading, setOutfitsLoading] = useState(true);
-  const [styleTag, setStyleTag] = useState('All');
+  const [tab, setTab] = useState('People');
 
   // ── People state ──────────────────────────────────────────────────────────
   const [query, setQuery] = useState('');
@@ -55,15 +47,6 @@ export default function DiscoverScreen({ navigation }) {
       getFollowing(user.uid).then(ids => setFollowing(new Set(ids))).catch(() => {});
     }, [user])
   );
-
-  // ── Load Explore outfits on mount ─────────────────────────────────────────
-  useEffect(() => {
-    setOutfitsLoading(true);
-    getTrendingOutfits(60)
-      .then(data => setOutfits(data))
-      .catch(() => setOutfits([]))
-      .finally(() => setOutfitsLoading(false));
-  }, []);
 
   // ── Load suggested people when People tab is opened ───────────────────────
   const loadSuggested = useCallback(async () => {
@@ -172,10 +155,6 @@ export default function DiscoverScreen({ navigation }) {
   }
 
   // ── Filtered data ─────────────────────────────────────────────────────────
-  const filteredOutfits = styleTag === 'All'
-    ? outfits
-    : outfits.filter(o => o.tags?.some(t => t.toLowerCase() === styleTag.toLowerCase()));
-
   const filteredCommunities = communities.filter(c => {
     const matchesTag = commFilter === 'All' || c.labels?.includes(commFilter) || c.name.toLowerCase().includes(commFilter.toLowerCase());
     const matchesQuery = commQuery.length < 2 || c.name.toLowerCase().includes(commQuery.toLowerCase()) || c.description?.toLowerCase().includes(commQuery.toLowerCase());
@@ -235,78 +214,13 @@ export default function DiscoverScreen({ navigation }) {
 
       {/* Tab row */}
       <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
-        {['Explore', 'People', 'Communities'].map(t => (
+        {['People', 'Communities'].map(t => (
           <TouchableOpacity key={t} style={styles.tabBtn} onPress={() => setTab(t)}>
             <Text style={[styles.tabText, { color: colors.textSecondary }, tab === t && { color: colors.textPrimary, fontWeight: '700' }]}>{t}</Text>
             {tab === t && <View style={[styles.tabUnderline, { backgroundColor: colors.primary }]} />}
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* ── EXPLORE TAB ── */}
-      {tab === 'Explore' && (
-        <View style={{ flex: 1 }}>
-          {/* Style tag chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tagRow}
-            style={styles.tagScroll}
-          >
-            {STYLE_TAGS.map(tag => (
-              <TouchableOpacity
-                key={tag}
-                style={[styles.tagChip, { borderColor: colors.border, backgroundColor: colors.background }, styleTag === tag && styles.tagChipActive]}
-                onPress={() => setStyleTag(tag)}
-              >
-                <Text style={[styles.tagChipText, { color: colors.textPrimary }, styleTag === tag && styles.tagChipTextActive]}>
-                  {tag}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {outfitsLoading ? (
-            <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
-          ) : (
-            <FlatList
-              data={filteredOutfits}
-              keyExtractor={item => item.id}
-              numColumns={2}
-              contentContainerStyle={styles.outfitGrid}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.outfitCell, { backgroundColor: colors.surface }]}
-                  onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
-                  activeOpacity={0.85}
-                >
-                  <Image source={{ uri: item.imageURL }} style={styles.outfitImage} resizeMode="cover" />
-                  {/* Rating badge */}
-                  {(item.avgRating ?? 0) > 0 && (
-                    <View style={styles.ratingBadge}>
-                      <Text style={styles.ratingBadgeText}>★ {item.avgRating.toFixed(1)}</Text>
-                    </View>
-                  )}
-                  {/* Tag pill */}
-                  {item.tags?.[0] && (
-                    <View style={styles.tagBadge}>
-                      <Text style={styles.tagBadgeText} numberOfLines={1}>{item.tags[0]}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyBox}>
-                  <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No outfits yet</Text>
-                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    {styleTag === 'All' ? 'Be the first to post.' : `No ${styleTag} outfits posted yet.`}
-                  </Text>
-                </View>
-              }
-            />
-          )}
-        </View>
-      )}
 
       {/* ── PEOPLE TAB ── */}
       {tab === 'People' && (
