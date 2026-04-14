@@ -58,12 +58,9 @@ export default function PostScreen({ navigation, route }) {
         itemIds: items.map(i => i.id),
         items,
       });
-      setImageUri(null);
-      setCaption('');
-      setSelectedTags([]);
-      setUploadError(null);
-      navigation.navigate('Feed');
-      Alert.alert('Posted!', 'Your outfit is live.');
+      // Navigate first — don't reset state, the screen unmounts naturally.
+      // Navigate to Main with Feed tab active, which dismisses Camera + Post modals.
+      navigation.navigate('Main', { screen: 'Feed' });
     } catch (err) {
       setUploadError('Upload failed. Check your connection and try again.');
     } finally {

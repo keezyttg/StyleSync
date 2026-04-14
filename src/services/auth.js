@@ -89,33 +89,42 @@ export async function getFollowers(uid) {
 }
 
 export async function followUser(currentUid, targetUid) {
+  // Core writes — must succeed for the follow to be saved
   await setDoc(doc(db, 'users', currentUid, 'following', targetUid), { followedAt: serverTimestamp() });
   await setDoc(doc(db, 'users', targetUid, 'followers', currentUid), { followedAt: serverTimestamp() });
-  await updateDoc(doc(db, 'users', currentUid), { following: increment(1) });
-  await updateDoc(doc(db, 'users', targetUid), { followers: increment(1) });
 
-  // Notify the followed user
-  const [followerSnap, targetToken] = await Promise.all([
-    getDoc(doc(db, 'users', currentUid)),
-    getUserPushToken(targetUid),
-  ]);
-  const followerData = followerSnap.data() ?? {};
-  const followerName = followerData.displayName || followerData.username || 'Someone';
-  sendPushNotification(targetToken, 'New Follower', `${followerName} started following you`);
-  saveNotification(targetUid, {
-    type: 'follow',
-    fromUid: currentUid,
-    fromName: followerName,
-    fromPhoto: followerData.photoURL ?? null,
-    message: `${followerName} started following you`,
-    outfitId: null,
-    outfitImage: null,
-  });
+  // Best-effort counter increments — don't let failures roll back the follow
+  try {
+    await updateDoc(doc(db, 'users', currentUid), { following: increment(1) });
+    await updateDoc(doc(db, 'users', targetUid), { followers: increment(1) });
+  } catch {}
+
+  // Fire-and-forget notifications — never block or fail the follow
+  getDoc(doc(db, 'users', currentUid))
+    .then(followerSnap => {
+      const followerData = followerSnap.data() ?? {};
+      const followerName = followerData.displayName || followerData.username || 'Someone';
+      getUserPushToken(targetUid).then(token => {
+        sendPushNotification(token, 'New Follower', `${followerName} started following you`);
+        saveNotification(targetUid, {
+          type: 'follow',
+          fromUid: currentUid,
+          fromName: followerName,
+          fromPhoto: followerData.photoURL ?? null,
+          message: `${followerName} started following you`,
+          outfitId: null,
+          outfitImage: null,
+        });
+      });
+    })
+    .catch(() => {});
 }
 
 export async function unfollowUser(currentUid, targetUid) {
   await deleteDoc(doc(db, 'users', currentUid, 'following', targetUid));
   await deleteDoc(doc(db, 'users', targetUid, 'followers', currentUid));
-  await updateDoc(doc(db, 'users', currentUid), { following: increment(-1) });
-  await updateDoc(doc(db, 'users', targetUid), { followers: increment(-1) });
+  try {
+    await updateDoc(doc(db, 'users', currentUid), { following: increment(-1) });
+    await updateDoc(doc(db, 'users', targetUid), { followers: increment(-1) });
+  } catch {}
 }

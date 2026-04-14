@@ -37,10 +37,12 @@ export default function FeedScreen({ navigation }) {
     }, [user])
   );
 
-  useEffect(() => {
-    if (!user) return;
-    getFollowing(user.uid).then(ids => setFollowing(new Set(ids))).catch(() => {});
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      getFollowing(user.uid).then(ids => setFollowing(new Set(ids))).catch(() => {});
+    }, [user])
+  );
 
   useEffect(() => {
     if (!user) return;

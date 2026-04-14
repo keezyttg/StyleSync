@@ -3,7 +3,8 @@ import {
   View, Text, TextInput, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, Image, ScrollView,
 } from 'react-native';
-import { getCommunities, searchCommunities } from '../services/communities';
+import { useFocusEffect } from '@react-navigation/native';
+import { getCommunities, isJoined, joinCommunity, leaveCommunity } from '../services/communities';
 import { getTrendingOutfits } from '../services/outfits';
 import { searchUsers, followUser, unfollowUser, getFollowing } from '../services/auth';
 import { useAuth } from '../hooks/useAuth';
@@ -44,12 +45,16 @@ export default function DiscoverScreen({ navigation }) {
   const [communities, setCommunities] = useState([]);
   const [commLoading, setCommLoading] = useState(false);
   const [commFilter, setCommFilter] = useState('All');
+  const [commQuery, setCommQuery] = useState('');
+  const [joinedCommunities, setJoinedCommunities] = useState(new Set());
 
-  // ── Load following list ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (!user) return;
-    getFollowing(user.uid).then(ids => setFollowing(new Set(ids))).catch(() => {});
-  }, [user]);
+  // ── Reload following list whenever this screen gains focus ───────────────
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      getFollowing(user.uid).then(ids => setFollowing(new Set(ids))).catch(() => {});
+    }, [user])
+  );
 
   // ── Load Explore outfits on mount ─────────────────────────────────────────
   useEffect(() => {
@@ -81,17 +86,23 @@ export default function DiscoverScreen({ navigation }) {
     if (tab === 'People' && suggested.length === 0) loadSuggested();
   }, [tab]);
 
-  // ── Load communities when Communities tab is opened ───────────────────────
+  // ── Load communities + joined state when Communities tab is opened ────────
   const loadCommunities = useCallback(async () => {
     setCommLoading(true);
     try {
       const data = await getCommunities();
-      setCommunities(data.length > 0 ? data : DEFAULT_COMMUNITIES);
+      const list = data.length > 0 ? data : DEFAULT_COMMUNITIES;
+      setCommunities(list);
+      if (user) {
+        const results = await Promise.all(list.map(c => isJoined(c.id, user.uid).catch(() => false)));
+        const joinedSet = new Set(list.filter((_, i) => results[i]).map(c => c.id));
+        setJoinedCommunities(joinedSet);
+      }
     } catch {
       setCommunities(DEFAULT_COMMUNITIES);
     }
     setCommLoading(false);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (tab === 'Communities' && communities.length === 0) loadCommunities();
@@ -137,17 +148,39 @@ export default function DiscoverScreen({ navigation }) {
     }
   }
 
+  // ── Community join toggle ─────────────────────────────────────────────────
+  async function handleJoinToggle(communityId, e) {
+    e.stopPropagation();
+    if (!user) return;
+    const wasJoined = joinedCommunities.has(communityId);
+    setJoinedCommunities(prev => {
+      const next = new Set(prev);
+      wasJoined ? next.delete(communityId) : next.add(communityId);
+      return next;
+    });
+    try {
+      wasJoined
+        ? await leaveCommunity(communityId, user.uid)
+        : await joinCommunity(communityId, user.uid);
+    } catch {
+      setJoinedCommunities(prev => {
+        const next = new Set(prev);
+        wasJoined ? next.add(communityId) : next.delete(communityId);
+        return next;
+      });
+    }
+  }
+
   // ── Filtered data ─────────────────────────────────────────────────────────
   const filteredOutfits = styleTag === 'All'
     ? outfits
     : outfits.filter(o => o.tags?.some(t => t.toLowerCase() === styleTag.toLowerCase()));
 
-  const filteredCommunities = commFilter === 'All'
-    ? communities
-    : communities.filter(c =>
-        c.labels?.includes(commFilter) ||
-        c.name.toLowerCase().includes(commFilter.toLowerCase())
-      );
+  const filteredCommunities = communities.filter(c => {
+    const matchesTag = commFilter === 'All' || c.labels?.includes(commFilter) || c.name.toLowerCase().includes(commFilter.toLowerCase());
+    const matchesQuery = commQuery.length < 2 || c.name.toLowerCase().includes(commQuery.toLowerCase()) || c.description?.toLowerCase().includes(commQuery.toLowerCase());
+    return matchesTag && matchesQuery;
+  });
 
   const peopleToShow = query.length >= 2 ? searchResults : suggested;
 
@@ -327,6 +360,26 @@ export default function DiscoverScreen({ navigation }) {
       {/* ── COMMUNITIES TAB ── */}
       {tab === 'Communities' && (
         <View style={{ flex: 1 }}>
+          {/* Search bar */}
+          <View style={styles.searchRow}>
+            <View style={[styles.searchBar, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={[styles.searchInput, { color: colors.textPrimary }]}
+                placeholder="Search communities"
+                placeholderTextColor={colors.textMuted}
+                value={commQuery}
+                onChangeText={setCommQuery}
+                autoCapitalize="none"
+              />
+              {commQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setCommQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={[styles.clearBtn, { color: colors.textMuted }]}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
           {/* Filter chips */}
           <ScrollView
             horizontal
@@ -352,32 +405,40 @@ export default function DiscoverScreen({ navigation }) {
               data={filteredCommunities}
               keyExtractor={item => item.id}
               contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.communityRow, { borderBottomColor: colors.border }]}
-                  onPress={() => navigation.navigate('CommunityDetail', { community: item })}
-                >
-                  <View style={styles.communityAvatar}>
-                    <Text style={styles.communityAvatarText}>{item.name[0].toUpperCase()}</Text>
-                  </View>
-                  <View style={styles.communityInfo}>
-                    <Text style={[styles.communityName, { color: colors.textPrimary }]}>{item.name}</Text>
-                    <Text style={[styles.communityDesc, { color: colors.textSecondary }]} numberOfLines={1}>{item.description}</Text>
-                    {item.labels?.length > 0 && (
-                      <View style={styles.labelRow}>
-                        {item.labels.slice(0, 3).map(l => (
-                          <View key={l} style={[styles.labelChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                            <Text style={[styles.labelText, { color: colors.textSecondary }]}>{l}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                  {item.memberCount > 0 && (
-                    <Text style={[styles.memberCount, { color: colors.textMuted }]}>{item.memberCount}</Text>
-                  )}
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => {
+                const joined = joinedCommunities.has(item.id);
+                return (
+                  <TouchableOpacity
+                    style={[styles.communityRow, { borderBottomColor: colors.border }]}
+                    onPress={() => navigation.navigate('CommunityDetail', { community: item })}
+                  >
+                    <View style={styles.communityAvatar}>
+                      <Text style={styles.communityAvatarText}>{item.name[0].toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.communityInfo}>
+                      <Text style={[styles.communityName, { color: colors.textPrimary }]}>{item.name}</Text>
+                      <Text style={[styles.communityDesc, { color: colors.textSecondary }]} numberOfLines={1}>{item.description}</Text>
+                      {item.labels?.length > 0 && (
+                        <View style={styles.labelRow}>
+                          {item.labels.slice(0, 3).map(l => (
+                            <View key={l} style={[styles.labelChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                              <Text style={[styles.labelText, { color: colors.textSecondary }]}>{l}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.joinBtn, joined && [styles.joinBtnJoined, { backgroundColor: colors.surface, borderColor: colors.border }]]}
+                      onPress={e => handleJoinToggle(item.id, e)}
+                    >
+                      <Text style={[styles.joinBtnText, joined && { color: colors.textPrimary }]}>
+                        {joined ? 'Joined ✓' : 'Join'}
+                      </Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              }}
               ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textSecondary, textAlign: 'center', marginTop: 60 }]}>No communities found.</Text>}
             />
           )}
@@ -440,6 +501,9 @@ const styles = StyleSheet.create({
   labelChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: BORDER_RADIUS.sm, borderWidth: 1 },
   labelText: { fontSize: FONT_SIZE.xs, fontWeight: '500' },
   memberCount: { fontSize: FONT_SIZE.xs, fontWeight: '600' },
+  joinBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: BORDER_RADIUS.full, flexShrink: 0 },
+  joinBtnJoined: { borderWidth: 1 },
+  joinBtnText: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '700' },
   // Empty states
   emptyBox: { alignItems: 'center', marginTop: 60, paddingHorizontal: SPACING.xl, gap: SPACING.sm },
   emptyTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700' },

@@ -48,7 +48,7 @@ function CustomTabBar({ state, navigation }) {
   const { colors, isDark } = useTheme();
 
   return (
-    <View style={tabStyles.safeArea}>
+    <View style={[tabStyles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[
         tabStyles.bar,
         {
