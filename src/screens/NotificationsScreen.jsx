@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, Image, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getNotifications, markAllRead } from '../services/notifications';
+import {
+  getNotifications,
+  markAllRead,
+  deleteNotification,
+  clearNotifications,
+} from '../services/notifications';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
@@ -30,18 +35,26 @@ export default function NotificationsScreen({ navigation }) {
   const { colors } = useTheme();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingIds, setDeletingIds] = useState(new Set());
+  const [clearingAll, setClearingAll] = useState(false);
+
+  const loadNotifications = useCallback(async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const data = await getNotifications(user.uid);
+      setNotifications(data.map(notification => ({ ...notification, read: true })));
+      markAllRead(user.uid).catch(() => {});
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!user) return;
-      setLoading(true);
-      getNotifications(user.uid)
-        .then(data => setNotifications(data))
-        .finally(() => setLoading(false));
-
-      // Mark all read when screen is opened
-      markAllRead(user.uid);
-    }, [user])
+      loadNotifications();
+    }, [loadNotifications])
   );
 
   function handleTap(notif) {
@@ -65,6 +78,69 @@ export default function NotificationsScreen({ navigation }) {
     }
   }
 
+  function handleDeletePress(notificationId) {
+    Alert.alert(
+      'Delete notification?',
+      'This notification will be removed from your list.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user) return;
+
+            setDeletingIds(prev => {
+              const next = new Set(prev);
+              next.add(notificationId);
+              return next;
+            });
+
+            try {
+              await deleteNotification(user.uid, notificationId);
+              setNotifications(prev => prev.filter(notification => notification.id !== notificationId));
+            } catch {
+              Alert.alert('Could not delete notification', 'Please try again.');
+            } finally {
+              setDeletingIds(prev => {
+                const next = new Set(prev);
+                next.delete(notificationId);
+                return next;
+              });
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  function handleClearAllPress() {
+    if (!user || notifications.length === 0 || clearingAll) return;
+
+    Alert.alert(
+      'Clear all notifications?',
+      'This will permanently remove every notification currently shown.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear all',
+          style: 'destructive',
+          onPress: async () => {
+            setClearingAll(true);
+            try {
+              await clearNotifications(user.uid);
+              setNotifications([]);
+            } catch {
+              Alert.alert('Could not clear notifications', 'Please try again.');
+            } finally {
+              setClearingAll(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -76,7 +152,18 @@ export default function NotificationsScreen({ navigation }) {
           <Text style={[styles.back, { color: colors.textPrimary }]}>‹</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Notifications</Text>
-        <View style={{ width: 28 }} />
+        <TouchableOpacity
+          style={[
+            styles.clearAllButton,
+            (notifications.length === 0 || clearingAll) && styles.clearAllButtonDisabled,
+          ]}
+          onPress={handleClearAllPress}
+          disabled={notifications.length === 0 || clearingAll}
+        >
+          <Text style={[styles.clearAllText, { color: colors.textPrimary }]}>
+            {clearingAll ? 'Clearing...' : 'Clear all'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -87,49 +174,64 @@ export default function NotificationsScreen({ navigation }) {
           keyExtractor={item => item.id}
           contentContainerStyle={{ paddingBottom: 100 }}
           renderItem={({ item }) => (
-            <TouchableOpacity
+            <View
               style={[
                 styles.row,
                 { borderBottomColor: colors.border },
                 !item.read && { backgroundColor: colors.surface },
               ]}
-              onPress={() => handleTap(item)}
-              activeOpacity={0.7}
             >
-              {/* Avatar */}
-              <View style={styles.avatarWrap}>
-                {item.fromPhoto ? (
-                  <Image source={{ uri: item.fromPhoto }} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatarFallback, { backgroundColor: COLORS.primary }]}>
-                    <Text style={styles.avatarInitial}>
-                      {(item.fromName || '?')[0].toUpperCase()}
+              <TouchableOpacity
+                style={styles.rowMain}
+                onPress={() => handleTap(item)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.avatarWrap}>
+                  {item.fromPhoto ? (
+                    <Image source={{ uri: item.fromPhoto }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatarFallback, { backgroundColor: COLORS.primary }]}>
+                      <Text style={styles.avatarInitial}>
+                        {(item.fromName || '?')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={[styles.typeIcon, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <Text style={[styles.typeIconText, item.type === 'rating' && { color: COLORS.star }]}>
+                      {TYPE_ICON[item.type] ?? '🔔'}
                     </Text>
                   </View>
-                )}
-                <View style={[styles.typeIcon, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <Text style={[styles.typeIconText, item.type === 'rating' && { color: COLORS.star }]}>
-                    {TYPE_ICON[item.type] ?? '🔔'}
-                  </Text>
                 </View>
-              </View>
 
-              {/* Message */}
-              <View style={styles.content}>
-                <Text style={[styles.message, { color: colors.textPrimary }]}>{item.message}</Text>
-                <Text style={[styles.time, { color: colors.textMuted }]}>{timeAgo(item.createdAt)}</Text>
-              </View>
+                <View style={styles.content}>
+                  <Text style={[styles.message, { color: colors.textPrimary }]}>{item.message}</Text>
+                  <View style={styles.metaRow}>
+                    <Text style={[styles.time, { color: colors.textMuted }]}>{timeAgo(item.createdAt)}</Text>
+                    {!item.read && <View style={styles.unreadDot} />}
+                  </View>
+                </View>
 
-              {/* Outfit thumbnail */}
-              {item.outfitImage ? (
-                <Image source={{ uri: item.outfitImage }} style={styles.outfitThumb} />
-              ) : (
-                <View style={{ width: 48 }} />
-              )}
+                {item.outfitImage ? (
+                  <Image source={{ uri: item.outfitImage }} style={styles.outfitThumb} />
+                ) : (
+                  <View style={styles.outfitPlaceholder} />
+                )}
+              </TouchableOpacity>
 
-              {/* Unread dot */}
-              {!item.read && <View style={styles.unreadDot} />}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.deleteButton,
+                  { borderColor: colors.border, backgroundColor: colors.background },
+                  deletingIds.has(item.id) && styles.deleteButtonDisabled,
+                ]}
+                onPress={() => handleDeletePress(item.id)}
+                disabled={deletingIds.has(item.id) || clearingAll}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {deletingIds.has(item.id) ? 'Deleting...' : 'Delete'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -160,6 +262,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md, paddingVertical: 14,
     borderBottomWidth: 1, gap: SPACING.md,
   },
+  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   avatarWrap: { position: 'relative', width: 48, height: 48 },
   avatar: { width: 48, height: 48, borderRadius: 24 },
   avatarFallback: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
@@ -171,15 +274,26 @@ const styles = StyleSheet.create({
   },
   typeIconText: { fontSize: 10, color: COLORS.primary },
   content: { flex: 1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: 3 },
   message: { fontSize: FONT_SIZE.sm, lineHeight: 20, fontWeight: '500' },
-  time: { fontSize: FONT_SIZE.xs, marginTop: 3 },
+  time: { fontSize: FONT_SIZE.xs },
   outfitThumb: { width: 48, height: 48, borderRadius: BORDER_RADIUS.sm },
+  outfitPlaceholder: { width: 48, height: 48 },
   unreadDot: {
-    position: 'absolute', right: 12, top: '50%',
     width: 8, height: 8, borderRadius: 4,
     backgroundColor: COLORS.primary,
-    transform: [{ translateY: -4 }],
   },
+  clearAllButton: { minWidth: 72, alignItems: 'flex-end' },
+  clearAllButtonDisabled: { opacity: 0.45 },
+  clearAllText: { fontSize: FONT_SIZE.sm, fontWeight: '700' },
+  deleteButton: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+  },
+  deleteButtonDisabled: { opacity: 0.6 },
+  deleteButtonText: { color: COLORS.error, fontSize: FONT_SIZE.xs, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 80, paddingHorizontal: SPACING.xl, gap: SPACING.sm },
   emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '800' },

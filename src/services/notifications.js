@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import {
-  doc, updateDoc, getDoc, addDoc, getDocs,
+  doc, updateDoc, getDoc, addDoc, getDocs, deleteDoc,
   collection, query, orderBy, limit, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -121,5 +121,31 @@ export async function markAllRead(uid) {
     await batch.commit();
   } catch (err) {
     console.log('markAllRead failed:', err.message);
+  }
+}
+
+export async function deleteNotification(uid, notificationId) {
+  try {
+    await deleteDoc(doc(db, 'users', uid, 'notifications', notificationId));
+  } catch (err) {
+    console.log('deleteNotification failed:', err.message);
+    throw err;
+  }
+}
+
+export async function clearNotifications(uid) {
+  try {
+    while (true) {
+      const q = query(collection(db, 'users', uid, 'notifications'), limit(50));
+      const snap = await getDocs(q);
+      if (snap.empty) return;
+
+      const batch = writeBatch(db);
+      snap.docs.forEach(notificationDoc => batch.delete(notificationDoc.ref));
+      await batch.commit();
+    }
+  } catch (err) {
+    console.log('clearNotifications failed:', err.message);
+    throw err;
   }
 }
