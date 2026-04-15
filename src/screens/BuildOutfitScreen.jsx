@@ -45,6 +45,18 @@ export default function BuildOutfitScreen({ navigation }) {
     navigation.navigate('Post', { preselectedItems: selectedItems });
   }
 
+  function handleRandomize() {
+    const picked = [];
+    CATEGORIES.forEach(cat => {
+      const catItems = allItems.filter(i => i.category === cat);
+      if (catItems.length > 0) {
+        const random = catItems[Math.floor(Math.random() * catItems.length)];
+        picked.push(random.id);
+      }
+    });
+    setSelected(picked);
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
@@ -52,11 +64,16 @@ export default function BuildOutfitScreen({ navigation }) {
           <Text style={styles.backText}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Build an Outfit</Text>
-        <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-          <Text style={styles.nextBtnText}>
-            Next {selected.length > 0 ? `(${selected.length})` : ''}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.randomizeBtn} onPress={handleRandomize}>
+            <Text style={styles.randomizeBtnText}>🎲</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
+            <Text style={styles.nextBtnText}>
+              Next {selected.length > 0 ? `(${selected.length})` : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Category chips */}
@@ -153,6 +170,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.md, borderBottomWidth: 1 },
   backText: { fontSize: FONT_SIZE.lg, color: COLORS.primary, fontWeight: '600' },
   title: { fontSize: FONT_SIZE.lg, fontWeight: '700' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  randomizeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary + '20', justifyContent: 'center', alignItems: 'center' },
+  randomizeBtnText: { fontSize: 18 },
   nextBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: BORDER_RADIUS.full },
   nextBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
   catRow: { paddingHorizontal: SPACING.md, gap: SPACING.sm, alignItems: 'center', paddingBottom: SPACING.sm, paddingTop: SPACING.sm },

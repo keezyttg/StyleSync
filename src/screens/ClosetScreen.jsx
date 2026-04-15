@@ -148,12 +148,10 @@ export default function ClosetScreen({ navigation }) {
         )}
       />
 
-      <TouchableOpacity style={[styles.buildBanner, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => navigation.navigate('BuildOutfit')}>
-        <Text style={styles.buildIcon}>⊞</Text>
-        <View>
-          <Text style={[styles.buildTitle, { color: colors.textPrimary }]}>Build an outfit</Text>
-          <Text style={[styles.buildSub, { color: colors.textSecondary }]}>Mix pieces from your closet & post</Text>
-        </View>
+      <TouchableOpacity style={[styles.buildBanner, { backgroundColor: COLORS.primary + '18', borderColor: COLORS.primary + '44', marginHorizontal: SPACING.md, marginBottom: SPACING.md }]} onPress={() => navigation.navigate('AvatarBuilder')}>
+        <Text style={styles.buildIcon}>🧍</Text>
+        <Text style={[styles.buildTitle, { color: COLORS.primary }]}>Build Outfit</Text>
+        <Text style={[styles.buildSub, { color: COLORS.primary + 'bb' }]}>Try on & mix looks</Text>
       </TouchableOpacity>
 
       <View style={styles.listHeader}>
@@ -259,7 +257,7 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   catText: { fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, fontWeight: '500' },
   catTextActive: { color: COLORS.white, fontWeight: '700' },
-  buildBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, marginHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, marginBottom: SPACING.md, gap: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  buildBanner: { borderRadius: BORDER_RADIUS.md, padding: SPACING.md, borderWidth: 1, alignItems: 'center' },
   buildIcon: { fontSize: 24, color: COLORS.primary },
   buildTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.textPrimary },
   buildSub: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
