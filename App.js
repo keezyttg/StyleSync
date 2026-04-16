@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import AppNavigator, { navigationRef } from './src/navigation/AppNavigator';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -43,8 +44,10 @@ function Root() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <Root />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <Root />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -62,7 +62,7 @@ export default function PostScreen({ navigation, route }) {
       });
       // Navigate first — don't reset state, the screen unmounts naturally.
       // Navigate to Main with Feed tab active, which dismisses Camera + Post modals.
-      navigation.navigate('Main', { screen: 'Feed' });
+      navigation.reset({ index: 0, routes: [{ name: 'Main', params: { screen: 'Feed' } }] });
     } catch (err) {
       setUploadError('Upload failed. Check your connection and try again.');
     } finally {

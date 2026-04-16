@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { getClosetItems, incrementWornCount, decrementWornCount } from '../services/closet';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, Modal, Alert } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
+import { getClosetItems, incrementWornCount, decrementWornCount, deleteClothingItem } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { ClosetRowSkeleton } from '../components/SkeletonLoader';
@@ -9,39 +10,58 @@ import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
 const SORTS = ['Newest', 'Most Worn', 'Least Worn', 'Price: High', 'Price: Low'];
 
-const ItemCard = React.memo(function ItemCard({ item, onEnlarge, onIncrement, onDecrement }) {
+const ItemCard = React.memo(function ItemCard({ item, onEnlarge, onIncrement, onDecrement, onDelete }) {
   const { colors } = useTheme();
+  const swipeRef = useRef(null);
   const priceLabel = item.price > 0 ? `${item.currency ?? '$'}${item.price}` : null;
   const worn = item.wornCount ?? 0;
-  return (
-    <View style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <TouchableOpacity style={styles.itemCardBody} onPress={() => onEnlarge(item)} activeOpacity={0.75}>
-        <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
-        <View style={styles.itemInfo}>
-          <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
-          <Text style={[styles.itemMeta, { color: colors.textSecondary }]}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
-          <View style={styles.itemFooter}>
-            <View style={[styles.wornPill, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.wornPillText, { color: colors.textSecondary }]}>👟 {worn}×</Text>
-            </View>
-            {priceLabel && (
-              <View style={styles.pricePill}>
-                <Text style={styles.pricePillText}>{priceLabel}</Text>
-              </View>
-            )}
-          </View>
-        </View>
+
+  function renderRightActions() {
+    return (
+      <TouchableOpacity
+        style={styles.deleteAction}
+        onPress={() => {
+          swipeRef.current?.close();
+          onDelete(item);
+        }}
+      >
+        <Text style={styles.deleteActionIcon}>🗑</Text>
+        <Text style={styles.deleteActionText}>Delete</Text>
       </TouchableOpacity>
-      <View style={[styles.wornBtnGroup, { borderLeftColor: colors.border }]}>
-        <TouchableOpacity style={styles.wornHalf} onPress={() => onIncrement(item)}>
-          <Text style={styles.wornPlus}>+</Text>
+    );
+  }
+
+  return (
+    <Swipeable ref={swipeRef} renderRightActions={renderRightActions} overshootRight={false} friction={2}>
+      <View style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <TouchableOpacity style={styles.itemCardBody} onPress={() => onEnlarge(item)} activeOpacity={0.75}>
+          <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
+          <View style={styles.itemInfo}>
+            <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+            <Text style={[styles.itemMeta, { color: colors.textSecondary }]}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
+            <View style={styles.itemFooter}>
+              <View style={[styles.wornPill, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.wornPillText, { color: colors.textSecondary }]}>👟 {worn}×</Text>
+              </View>
+              {priceLabel && (
+                <View style={styles.pricePill}>
+                  <Text style={styles.pricePillText}>{priceLabel}</Text>
+                </View>
+              )}
+            </View>
+          </View>
         </TouchableOpacity>
-        <View style={[styles.wornDivider, { backgroundColor: colors.border }]} />
-        <TouchableOpacity style={styles.wornHalf} onPress={() => onDecrement(item)}>
-          <Text style={[styles.wornMinus, worn === 0 && styles.wornBtnDisabled]}>−</Text>
-        </TouchableOpacity>
+        <View style={[styles.wornBtnGroup, { borderLeftColor: colors.border }]}>
+          <TouchableOpacity style={styles.wornHalf} onPress={() => onIncrement(item)}>
+            <Text style={styles.wornPlus}>+</Text>
+          </TouchableOpacity>
+          <View style={[styles.wornDivider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity style={styles.wornHalf} onPress={() => onDecrement(item)}>
+            <Text style={[styles.wornMinus, worn === 0 && styles.wornBtnDisabled]}>−</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </Swipeable>
   );
 });
 
@@ -105,8 +125,28 @@ export default function ClosetScreen({ navigation }) {
     }
   }, [items, sort]);
 
+  async function handleDelete(item) {
+    Alert.alert('Delete Item', `Remove "${item.name}" from your closet?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          setEnlargedItem(null);
+          setItems(prev => prev.filter(i => i.id !== item.id));
+          try {
+            await deleteClothingItem(user.uid, item.id);
+          } catch {
+            setItems(prev => [...prev, item]); // revert on failure
+          }
+        },
+      },
+    ]);
+  }
+
   const handleIncrementWornCb = useCallback((item) => handleIncrementWorn(item), [user, items]);
   const handleDecrementWornCb = useCallback((item) => handleDecrementWorn(item), [user, items]);
+
+  const handleDeleteCb = useCallback((item) => handleDelete(item), [user, items]);
 
   const renderItem = useCallback(({ item }) => (
     <ItemCard
@@ -114,8 +154,9 @@ export default function ClosetScreen({ navigation }) {
       onEnlarge={setEnlargedItem}
       onIncrement={handleIncrementWornCb}
       onDecrement={handleDecrementWornCb}
+      onDelete={handleDeleteCb}
     />
-  ), [handleIncrementWornCb, handleDecrementWornCb]);
+  ), [handleIncrementWornCb, handleDecrementWornCb, handleDeleteCb]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -249,6 +290,9 @@ export default function ClosetScreen({ navigation }) {
                     </View>
                   )}
                 </View>
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(enlargedItem)}>
+                  <Text style={styles.deleteBtnText}>Delete Item</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -319,6 +363,11 @@ const styles = StyleSheet.create({
   modalStat: { alignItems: 'center' },
   modalStatValue: { fontSize: FONT_SIZE.md, fontWeight: '800', color: COLORS.textPrimary },
   modalStatLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
+  deleteBtn: { marginTop: SPACING.md, paddingVertical: 12, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: '#ef4444', alignItems: 'center' },
+  deleteBtnText: { color: '#ef4444', fontWeight: '700', fontSize: FONT_SIZE.sm },
+  deleteAction: { backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center', width: 80, marginBottom: SPACING.sm, borderRadius: BORDER_RADIUS.lg },
+  deleteActionIcon: { fontSize: 18 },
+  deleteActionText: { color: '#fff', fontSize: FONT_SIZE.xs, fontWeight: '700', marginTop: 2 },
   sortMenu: { marginHorizontal: SPACING.md, marginBottom: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, overflow: 'hidden' },
   sortOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border },
   sortOptionText: { fontSize: FONT_SIZE.md, color: COLORS.textPrimary },
