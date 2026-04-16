@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocFromServer, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { auth, db, storage } from './firebase';
@@ -132,16 +132,19 @@ export async function followUser(currentUid, targetUid) {
 
 export function useGoogleSignIn() {
   const [request, response, promptAsync] = Google.useAuthRequest({ webClientId: WEB_CLIENT_ID, iosClientId: IOS_CLIENT_ID });
+  const [googleError, setGoogleError] = useState(null);
 
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       const credential = GoogleAuthProvider.credential(id_token);
-      signInWithCredential(auth, credential).catch(console.error);
+      signInWithCredential(auth, credential).catch(() => {
+        setGoogleError('Google sign-in failed. Please try again.');
+      });
     }
   }, [response]);
 
-  return { request, promptAsync };
+  return { request, promptAsync, googleError };
 }
 
 export async function unfollowUser(currentUid, targetUid) {

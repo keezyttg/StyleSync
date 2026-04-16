@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet, Alert,
   Image, Dimensions, StatusBar, Animated, Easing,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -48,8 +48,8 @@ export default function CameraScreen({ navigation }) {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.85, skipProcessing: false });
       setPreview(photo.uri);
       Animated.timing(previewOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-    } catch (err) {
-      console.log('Camera error:', err);
+    } catch {
+      Alert.alert('Camera Error', 'Failed to take photo. Please try again.');
     } finally {
       setCapturing(false);
     }
@@ -57,7 +57,10 @@ export default function CameraScreen({ navigation }) {
 
   async function pickFromGallery() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      Alert.alert('Permission Needed', 'Allow access to your photos to pick an image.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,

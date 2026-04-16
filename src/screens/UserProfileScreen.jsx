@@ -30,7 +30,7 @@ export default function UserProfileScreen({ navigation, route }) {
         setOutfits(outs);
         setIsFollowing(followingIds.includes(userId));
       } catch (err) {
-        console.log('UserProfile load error:', err);
+        // non-fatal: profile stays null and UI shows empty state
       }
       setLoading(false);
     }

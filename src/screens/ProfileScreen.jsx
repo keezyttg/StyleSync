@@ -29,7 +29,7 @@ export default function ProfileScreen({ navigation }) {
           setOutfits(outs);
           setSavedOutfits(saved);
         })
-        .catch(err => console.log('Profile load error:', err))
+        .catch(() => {})
         .finally(() => setLoading(false));
     }, [user])
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, FlatList, Image, TouchableOpacity,
+  View, Text, FlatList, TouchableOpacity,
   StyleSheet, RefreshControl, useWindowDimensions, ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,7 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { FeedCardSkeleton } from '../components/SkeletonLoader';
 import { getUnreadCount } from '../services/notifications';
 import { useFocusEffect } from '@react-navigation/native';
-import GeminiHangerIcon from '../components/GeminiHangerIcon';
+import { OutfitCard, CARD_CHROME } from '../components/FeedCard';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const COMMUNITIES_CACHE_KEY = 'user_communities_cache';
@@ -24,6 +24,18 @@ const TRENDING_FILTERS = [
   { key: 'Rising',        icon: '📈' },
   { key: 'Controversial', icon: '⚡' },
 ];
+
+// Module-level cache: avoids re-fetching profiles across filter/tab changes
+const profileCache = new Map();
+
+async function fetchMissingProfiles(ids) {
+  const toFetch = ids.filter(id => !profileCache.has(id));
+  if (toFetch.length > 0) {
+    const profiles = await Promise.all(toFetch.map(id => getUserProfile(id).catch(() => null)));
+    toFetch.forEach((id, i) => { if (profiles[i]) profileCache.set(id, profiles[i]); });
+  }
+  return ids.map(id => profileCache.get(id) ?? null);
+}
 
 export default function FeedScreen({ navigation }) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -77,7 +89,7 @@ export default function FeedScreen({ navigation }) {
         data.filter(o => !o.username && o.userId).map(o => o.userId)
       )];
       if (missingIds.length > 0) {
-        const profiles = await Promise.all(missingIds.map(id => getUserProfile(id).catch(() => null)));
+        const profiles = await fetchMissingProfiles(missingIds);
         const profileMap = {};
         missingIds.forEach((id, i) => { if (profiles[i]) profileMap[id] = profiles[i]; });
         setOutfits(data.map(o => {
@@ -88,8 +100,7 @@ export default function FeedScreen({ navigation }) {
       } else {
         setOutfits(data);
       }
-    } catch (err) {
-      console.log('Feed load error:', err);
+    } catch {
       setError('Could not load outfits. Check your connection.');
     }
     setLoading(false);
@@ -112,7 +123,7 @@ export default function FeedScreen({ navigation }) {
     );
   })();
 
-  async function handleFollow(targetUid) {
+  const handleFollow = useCallback(async (targetUid) => {
     if (!user || !targetUid || targetUid === user.uid) return;
     const isFollowing = following.has(targetUid);
     setFollowing(prev => {
@@ -131,79 +142,17 @@ export default function FeedScreen({ navigation }) {
         return next;
       });
     }
-  }
+  }, [user, following]);
 
-  function HangerRow({ rating, count }) {
-    return (
-      <View style={styles.hangerRow}>
-        {[1, 2, 3, 4, 5].map(i => (
-          <GeminiHangerIcon
-            key={i}
-            size={16}
-            tone={i <= Math.round(rating) ? 'gradient' : 'solid'}
-            color={colors.border}
-            opacity={i <= Math.round(rating) ? 1 : 0.8}
-          />
-        ))}
-        <Text style={[styles.ratingText, { color: colors.textPrimary }]}>{rating.toFixed(1)}</Text>
-        <Text style={[styles.ratingCount, { color: colors.textSecondary }]}>({count})</Text>
-      </View>
-    );
-  }
-
-  function OutfitCard({ item }) {
-    const isFollowingUser = following.has(item.userId);
-    const isOwn = user?.uid === item.userId;
-    const displayName = item.username || item.displayName || 'User';
-    // Keep image tall but ensure the footer (rating) is always visible on screen
-    const imageHeight = Math.min(screenWidth * 1.25, screenHeight - CARD_CHROME - 220);
-
-    return (
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-        onPress={() => navigation.navigate('OutfitDetail', { outfit: item })}
-        activeOpacity={0.9}
-      >
-        <View style={[styles.cardHeader, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            onPress={() => item.userId && navigation.navigate('UserProfile', { userId: item.userId, username: item.username || item.displayName })}
-          >
-            {item.userPhotoURL ? (
-              <Image source={{ uri: item.userPhotoURL }} style={styles.avatarCircle} />
-            ) : (
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerInfo}
-            onPress={() => item.userId && navigation.navigate('UserProfile', { userId: item.userId, username: item.username || item.displayName })}
-          >
-            <Text style={[styles.username, { color: colors.textPrimary }]}>{displayName}</Text>
-            {item.tags?.[0] && <Text style={[styles.tagLine, { color: colors.textSecondary }]}>{item.tags[0]}</Text>}
-          </TouchableOpacity>
-          {!isOwn && (
-            <TouchableOpacity
-              style={[styles.followBtn, isFollowingUser && [styles.followBtnActive, { backgroundColor: colors.surface, borderColor: colors.border }]]}
-              onPress={() => handleFollow(item.userId)}
-            >
-              <Text style={[styles.followBtnText, isFollowingUser && { color: colors.textPrimary }]}>
-                {isFollowingUser ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <Image source={{ uri: item.imageURL }} style={[styles.outfitImage, { height: imageHeight }]} resizeMode="cover" />
-
-        <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
-          <HangerRow rating={item.avgRating ?? 0} count={item.ratingCount ?? 0} />
-          <Text style={[styles.savesText, { color: colors.textSecondary }]}>{item.saves ?? 0} saves</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  }
+  const renderItem = useCallback(({ item }) => (
+    <OutfitCard
+      item={item}
+      isFollowing={following.has(item.userId)}
+      isOwn={user?.uid === item.userId}
+      onFollow={handleFollow}
+      navigation={navigation}
+    />
+  ), [following, user, handleFollow, navigation]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -293,10 +242,13 @@ export default function FeedScreen({ navigation }) {
         <FlatList
           data={filteredOutfits}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <OutfitCard item={item} />}
+          renderItem={renderItem}
           contentContainerStyle={{ gap: 1 }}
           snapToInterval={Math.min(screenWidth * 1.25, screenHeight - CARD_CHROME - 220) + CARD_CHROME}
           decelerationRate="fast"
+          removeClippedSubviews
+          maxToRenderPerBatch={5}
+          windowSize={5}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -312,9 +264,6 @@ export default function FeedScreen({ navigation }) {
     </View>
   );
 }
-
-// card header (~70) + card footer (~56) + 1px separator
-const CARD_CHROME = 127;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -342,22 +291,6 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   filterChipText: { fontSize: FONT_SIZE.sm, fontWeight: '500' },
   filterChipTextActive: { color: COLORS.white, fontWeight: '700' },
-  card: { borderBottomWidth: 1, overflow: 'hidden' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md },
-  avatarCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
-  avatarText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
-  headerInfo: { flex: 1 },
-  username: { fontSize: FONT_SIZE.md, fontWeight: '700' },
-  tagLine: { fontSize: FONT_SIZE.xs, marginTop: 1 },
-  followBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: BORDER_RADIUS.full },
-  followBtnActive: { borderWidth: 1 },
-  followBtnText: { color: COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: '700' },
-  outfitImage: { width: '100%' },
-  cardFooter: { padding: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1 },
-  hangerRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  ratingText: { fontSize: FONT_SIZE.md, fontWeight: '700', marginLeft: 6 },
-  ratingCount: { fontSize: FONT_SIZE.sm, marginLeft: 2 },
-  savesText: { fontSize: FONT_SIZE.sm },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl, marginTop: 60 },
   errorText: { fontSize: FONT_SIZE.md, textAlign: 'center', marginBottom: SPACING.md },
   retryBtn: { borderWidth: 1.5, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.lg, paddingVertical: 10 },

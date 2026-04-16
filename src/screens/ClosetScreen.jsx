@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { getClosetItems, incrementWornCount, decrementWornCount } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
@@ -8,6 +8,42 @@ import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
 const SORTS = ['Newest', 'Most Worn', 'Least Worn', 'Price: High', 'Price: Low'];
+
+const ItemCard = React.memo(function ItemCard({ item, onEnlarge, onIncrement, onDecrement }) {
+  const { colors } = useTheme();
+  const priceLabel = item.price > 0 ? `${item.currency ?? '$'}${item.price}` : null;
+  const worn = item.wornCount ?? 0;
+  return (
+    <View style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <TouchableOpacity style={styles.itemCardBody} onPress={() => onEnlarge(item)} activeOpacity={0.75}>
+        <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
+        <View style={styles.itemInfo}>
+          <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.itemMeta, { color: colors.textSecondary }]}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
+          <View style={styles.itemFooter}>
+            <View style={[styles.wornPill, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.wornPillText, { color: colors.textSecondary }]}>👟 {worn}×</Text>
+            </View>
+            {priceLabel && (
+              <View style={styles.pricePill}>
+                <Text style={styles.pricePillText}>{priceLabel}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+      <View style={[styles.wornBtnGroup, { borderLeftColor: colors.border }]}>
+        <TouchableOpacity style={styles.wornHalf} onPress={() => onIncrement(item)}>
+          <Text style={styles.wornPlus}>+</Text>
+        </TouchableOpacity>
+        <View style={[styles.wornDivider, { backgroundColor: colors.border }]} />
+        <TouchableOpacity style={styles.wornHalf} onPress={() => onDecrement(item)}>
+          <Text style={[styles.wornMinus, worn === 0 && styles.wornBtnDisabled]}>−</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
 
 export default function ClosetScreen({ navigation }) {
   const { colors } = useTheme();
@@ -25,24 +61,13 @@ export default function ClosetScreen({ navigation }) {
     try {
       const data = await getClosetItems(user.uid, category === 'All' ? undefined : category);
       setItems(data);
-    } catch (err) {
-      console.log('Closet load error:', err);
+    } catch {
+      // load failure is non-fatal; items stays empty and UI shows empty state
     }
     setLoading(false);
   }, [user, category]);
 
   const totalWears = items.reduce((sum, i) => sum + (i.wornCount ?? 0), 0);
-
-  function sortedItems() {
-    const arr = [...items];
-    switch (sort) {
-      case 'Most Worn': return arr.sort((a, b) => (b.wornCount ?? 0) - (a.wornCount ?? 0));
-      case 'Least Worn': return arr.sort((a, b) => (a.wornCount ?? 0) - (b.wornCount ?? 0));
-      case 'Price: High': return arr.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
-      case 'Price: Low': return arr.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-      default: return arr; // Newest — already sorted by addedAt desc
-    }
-  }
 
   async function handleIncrementWorn(item) {
     try {
@@ -50,8 +75,8 @@ export default function ClosetScreen({ navigation }) {
       setItems(prev => prev.map(i =>
         i.id === item.id ? { ...i, wornCount: (i.wornCount ?? 0) + 1 } : i
       ));
-    } catch (err) {
-      console.log('Worn count error:', err);
+    } catch {
+      // optimistic update already applied; revert isn't needed for worn count
     }
   }
 
@@ -62,47 +87,35 @@ export default function ClosetScreen({ navigation }) {
       setItems(prev => prev.map(i =>
         i.id === item.id ? { ...i, wornCount: Math.max(0, (i.wornCount ?? 0) - 1) } : i
       ));
-    } catch (err) {
-      console.log('Worn count error:', err);
+    } catch {
+      // same as above
     }
   }
 
   useEffect(() => { load(); }, [load]);
 
-  function ItemCard({ item }) {
-    const priceLabel = item.price > 0 ? `${item.currency ?? '$'}${item.price}` : null;
-    const worn = item.wornCount ?? 0;
-    return (
-      <View style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <TouchableOpacity style={styles.itemCardBody} onPress={() => setEnlargedItem(item)} activeOpacity={0.75}>
-          <Image source={{ uri: item.imageURL }} style={styles.itemImage} resizeMode="cover" />
-          <View style={styles.itemInfo}>
-            <Text style={[styles.itemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
-            <Text style={[styles.itemMeta, { color: colors.textSecondary }]}>{item.category}{item.size ? ` · ${item.size}` : ''}</Text>
-            <View style={styles.itemFooter}>
-              <View style={[styles.wornPill, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.wornPillText, { color: colors.textSecondary }]}>👟 {worn}×</Text>
-              </View>
-              {priceLabel && (
-                <View style={styles.pricePill}>
-                  <Text style={styles.pricePillText}>{priceLabel}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </TouchableOpacity>
-        <View style={[styles.wornBtnGroup, { borderLeftColor: colors.border }]}>
-          <TouchableOpacity style={styles.wornHalf} onPress={() => handleIncrementWorn(item)}>
-            <Text style={styles.wornPlus}>+</Text>
-          </TouchableOpacity>
-          <View style={[styles.wornDivider, { backgroundColor: colors.border }]} />
-          <TouchableOpacity style={styles.wornHalf} onPress={() => handleDecrementWorn(item)}>
-            <Text style={[styles.wornMinus, worn === 0 && styles.wornBtnDisabled]}>−</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  const sortedItems = useMemo(() => {
+    const arr = [...items];
+    switch (sort) {
+      case 'Most Worn':   return arr.sort((a, b) => (b.wornCount ?? 0) - (a.wornCount ?? 0));
+      case 'Least Worn':  return arr.sort((a, b) => (a.wornCount ?? 0) - (b.wornCount ?? 0));
+      case 'Price: High': return arr.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+      case 'Price: Low':  return arr.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+      default: return arr;
+    }
+  }, [items, sort]);
+
+  const handleIncrementWornCb = useCallback((item) => handleIncrementWorn(item), [user, items]);
+  const handleDecrementWornCb = useCallback((item) => handleDecrementWorn(item), [user, items]);
+
+  const renderItem = useCallback(({ item }) => (
+    <ItemCard
+      item={item}
+      onEnlarge={setEnlargedItem}
+      onIncrement={handleIncrementWornCb}
+      onDecrement={handleDecrementWornCb}
+    />
+  ), [handleIncrementWornCb, handleDecrementWornCb]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -182,9 +195,12 @@ export default function ClosetScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
-          data={sortedItems()}
+          data={sortedItems}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <ItemCard item={item} />}
+          renderItem={renderItem}
+          removeClippedSubviews
+          maxToRenderPerBatch={10}
+          windowSize={7}
           contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

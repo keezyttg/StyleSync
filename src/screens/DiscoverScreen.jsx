@@ -10,6 +10,41 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
+const PersonRow = React.memo(function PersonRow({ item, isFollowing, navigation, onFollow }) {
+  const { colors } = useTheme();
+  const displayName = item.displayName || item.username || '?';
+  return (
+    <TouchableOpacity
+      style={[styles.personRow, { borderBottomColor: colors.border }]}
+      onPress={() => navigation.navigate('UserProfile', { userId: item.id, username: item.username })}
+      activeOpacity={0.7}
+    >
+      {item.photoURL ? (
+        <Image source={{ uri: item.photoURL }} style={styles.personAvatarImg} />
+      ) : (
+        <View style={styles.personAvatar}>
+          <Text style={styles.personAvatarText}>{displayName[0].toUpperCase()}</Text>
+        </View>
+      )}
+      <View style={styles.personInfo}>
+        <Text style={[styles.personName, { color: colors.textPrimary }]}>{displayName}</Text>
+        <Text style={[styles.personUsername, { color: colors.textSecondary }]}>@{item.username}</Text>
+      </View>
+      <TouchableOpacity
+        style={[
+          styles.followBtn,
+          isFollowing && [styles.followBtnActive, { backgroundColor: colors.surface, borderColor: colors.border }],
+        ]}
+        onPress={() => onFollow(item.id)}
+      >
+        <Text style={[styles.followBtnText, isFollowing && { color: colors.textPrimary }]}>
+          {isFollowing ? 'Following' : 'Follow'}
+        </Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+});
+
 const DEFAULT_COMMUNITIES = [
   { id: '1', name: 'NYC Fashion',   description: 'Fashion style from NYC',           labels: ['Streetwear'] },
   { id: '2', name: 'High Fashion',  description: 'Designer brands only',             labels: ['Formal'] },
@@ -177,41 +212,14 @@ export default function DiscoverScreen({ navigation }) {
 
   const peopleToShow = query.length >= 2 ? searchResults : suggested;
 
-  // ── Sub-renders ───────────────────────────────────────────────────────────
-  function PersonRow({ item }) {
-    const isFollowing = following.has(item.id);
-    const displayName = item.displayName || item.username || '?';
-    return (
-      <TouchableOpacity
-        style={[styles.personRow, { borderBottomColor: colors.border }]}
-        onPress={() => navigation.navigate('UserProfile', { userId: item.id, username: item.username })}
-        activeOpacity={0.7}
-      >
-        {item.photoURL ? (
-          <Image source={{ uri: item.photoURL }} style={styles.personAvatarImg} />
-        ) : (
-          <View style={styles.personAvatar}>
-            <Text style={styles.personAvatarText}>{displayName[0].toUpperCase()}</Text>
-          </View>
-        )}
-        <View style={styles.personInfo}>
-          <Text style={[styles.personName, { color: colors.textPrimary }]}>{displayName}</Text>
-          <Text style={[styles.personUsername, { color: colors.textSecondary }]}>@{item.username}</Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            styles.followBtn,
-            isFollowing && [styles.followBtnActive, { backgroundColor: colors.surface, borderColor: colors.border }],
-          ]}
-          onPress={() => handleFollow(item.id)}
-        >
-          <Text style={[styles.followBtnText, isFollowing && { color: colors.textPrimary }]}>
-            {isFollowing ? 'Following' : 'Follow'}
-          </Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  }
+  const renderPersonRow = useCallback(({ item }) => (
+    <PersonRow
+      item={item}
+      isFollowing={following.has(item.id)}
+      navigation={navigation}
+      onFollow={handleFollow}
+    />
+  ), [following, navigation, handleFollow]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -270,7 +278,10 @@ export default function DiscoverScreen({ navigation }) {
               data={peopleToShow}
               keyExtractor={item => item.id}
               contentContainerStyle={{ paddingHorizontal: SPACING.md, paddingBottom: 100 }}
-              renderItem={({ item }) => <PersonRow item={item} />}
+              renderItem={renderPersonRow}
+              removeClippedSubviews
+              maxToRenderPerBatch={10}
+              windowSize={7}
             />
           ) : (
             <View style={styles.emptyBox}>

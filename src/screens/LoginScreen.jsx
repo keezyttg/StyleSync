@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView,
@@ -17,7 +17,11 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { request, promptAsync } = useGoogleSignIn();
+  const { request, promptAsync, googleError } = useGoogleSignIn();
+
+  useEffect(() => {
+    if (googleError) Alert.alert('Google Sign-In Failed', googleError);
+  }, [googleError]);
 
   async function handleSubmit() {
     if (!email || !password) { Alert.alert('Error', 'Please fill in all fields.'); return; }
