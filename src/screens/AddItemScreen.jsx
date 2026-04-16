@@ -6,6 +6,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { uploadItemImage, addClothingItem } from '../services/closet';
 import { autoTagImage } from '../services/autotag';
+import { removeBackground } from '../services/removeBackground';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
@@ -32,6 +33,7 @@ export default function AddItemScreen({ navigation }) {
   const [currency, setCurrency] = useState('$');
   const [loading, setLoading] = useState(false);
   const [tagging, setTagging] = useState(false);
+  const [bgRemoving, setBgRemoving] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
 
   function autoSuggestTags(text) {
@@ -60,6 +62,18 @@ export default function AddItemScreen({ navigation }) {
     }
   }
 
+  async function applyBgRemoval(uri) {
+    setBgRemoving(true);
+    try {
+      const cleaned = await removeBackground(uri);
+      setImageUri(cleaned);
+    } catch (err) {
+      Alert.alert('Background removal failed', err.message);
+    } finally {
+      setBgRemoving(false);
+    }
+  }
+
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'We need access to your photos.'); return; }
@@ -68,6 +82,7 @@ export default function AddItemScreen({ navigation }) {
       const uri = result.assets[0].uri;
       setImageUri(uri);
       runAutoTag(uri);
+      applyBgRemoval(uri);
     }
   }
 
@@ -79,6 +94,7 @@ export default function AddItemScreen({ navigation }) {
       const uri = result.assets[0].uri;
       setImageUri(uri);
       runAutoTag(uri);
+      applyBgRemoval(uri);
     }
   }
 
@@ -110,8 +126,8 @@ export default function AddItemScreen({ navigation }) {
           <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Add Item</Text>
-        <TouchableOpacity style={[styles.saveBtn, loading && styles.saveBtnDisabled]} onPress={handleSave} disabled={loading}>
-          {loading ? <ActivityIndicator color={COLORS.white} size="small" /> : <Text style={styles.saveBtnText}>Save</Text>}
+        <TouchableOpacity style={[styles.saveBtn, (loading || bgRemoving) && styles.saveBtnDisabled]} onPress={handleSave} disabled={loading || bgRemoving}>
+          {loading ? <ActivityIndicator color={COLORS.white} size="small" /> : <Text style={styles.saveBtnText}>{bgRemoving ? 'Wait…' : 'Save'}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -123,6 +139,12 @@ export default function AddItemScreen({ navigation }) {
             <View style={styles.photoPlaceholder}>
               <Text style={styles.photoIcon}>📷</Text>
               <Text style={[styles.photoHint, { color: colors.textSecondary }]}>Tap to add photo</Text>
+            </View>
+          )}
+          {bgRemoving && (
+            <View style={styles.bgRemovingOverlay}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.bgRemovingText}>Removing background…</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -265,7 +287,9 @@ const styles = StyleSheet.create({
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
   scroll: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md },
-  photoBox: { width: '100%', height: 240, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.sm, borderWidth: 1 },
+  photoBox: { width: '100%', height: 240, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.sm, borderWidth: 1, position: 'relative' },
+  bgRemovingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  bgRemovingText: { color: '#fff', fontSize: FONT_SIZE.sm, fontWeight: '600' },
   photoPreview: { width: '100%', height: '100%' },
   photoPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: SPACING.sm },
   photoIcon: { fontSize: 40 },
