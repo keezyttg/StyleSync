@@ -4,30 +4,8 @@ import { rateOutfit, saveOutfit, isSaved, deleteOutfit } from '../services/outfi
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPushToken, sendPushNotification, saveNotification } from '../services/notifications';
+import GeminiHangerIcon from '../components/GeminiHangerIcon';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
-
-function HangerIcon({ filled, size = 28 }) {
-  const color = filled ? COLORS.primary : 'rgba(255,255,255,0.35)';
-  const hw = size;
-  return (
-    <View style={{ width: hw, height: hw + 4, alignItems: 'center' }}>
-      <View style={{
-        width: hw * 0.38, height: hw * 0.24,
-        borderRadius: hw * 0.19,
-        borderWidth: 2.5, borderColor: color, borderBottomWidth: 0,
-      }} />
-      <View style={{
-        marginTop: 1,
-        width: 0, height: 0,
-        borderLeftWidth: hw / 2, borderRightWidth: hw / 2,
-        borderBottomWidth: hw * 0.56,
-        borderLeftColor: 'transparent', borderRightColor: 'transparent',
-        borderBottomColor: color,
-      }} />
-      <View style={{ width: hw, height: 2.5, backgroundColor: color, borderRadius: 2 }} />
-    </View>
-  );
-}
 
 export default function OutfitDetailScreen({ route, navigation }) {
   const { outfit } = route.params;
@@ -53,13 +31,13 @@ export default function OutfitDetailScreen({ route, navigation }) {
       if (outfit.userId && outfit.userId !== user.uid) {
         const token = await getUserPushToken(outfit.userId);
         const raterName = user.displayName || 'Someone';
-        sendPushNotification(token, 'New Rating', `${raterName} rated your outfit ${value}/5 ★`);
+        sendPushNotification(token, 'New Rating', `${raterName} rated your outfit ${value}/5`);
         saveNotification(outfit.userId, {
           type: 'rating',
           fromUid: user.uid,
           fromName: raterName,
           fromPhoto: user.photoURL ?? null,
-          message: `${raterName} rated your outfit ${value}/5 ★`,
+          message: `${raterName} rated your outfit ${value}/5`,
           outfitId: outfit.id,
           outfitImage: outfit.imageURL ?? null,
         });
@@ -74,7 +52,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
     try {
       await Share.share({
         title: 'StyleSync Outfit',
-        message: `Check out this outfit by @${poster} on StyleSync 👗\n${outfit.imageURL}`,
+        message: `Check out this outfit by @${poster} on StyleSync\n${outfit.imageURL}`,
         url: outfit.imageURL,
       });
     } catch (err) {
@@ -150,7 +128,12 @@ export default function OutfitDetailScreen({ route, navigation }) {
         </Text>
         {HANGERS.map(v => (
           <TouchableOpacity key={v} onPress={() => handleRate(v)} style={styles.hangerBtn} activeOpacity={0.7}>
-            <HangerIcon filled={v <= userRating} size={26} />
+            <GeminiHangerIcon
+              size={26}
+              tone={v <= userRating ? 'gradient' : 'solid'}
+              color={COLORS.white}
+              opacity={v <= userRating ? 1 : 0.35}
+            />
           </TouchableOpacity>
         ))}
       </View>
@@ -168,8 +151,9 @@ export default function OutfitDetailScreen({ route, navigation }) {
             </Text>
           </View>
           <View style={[styles.ratingPill, { backgroundColor: colors.surface }]}>
+            <GeminiHangerIcon size={14} />
             <Text style={[styles.ratingPillText, { color: colors.textPrimary }]}>
-              {(outfit.avgRating ?? 0).toFixed(1)} ★ · {outfit.ratingCount ?? 0}
+              {(outfit.avgRating ?? 0).toFixed(1)} · {outfit.ratingCount ?? 0}
             </Text>
           </View>
         </View>
@@ -245,7 +229,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
   outfitUser: { fontSize: FONT_SIZE.lg, fontWeight: '700' },
   outfitMeta: { fontSize: FONT_SIZE.sm },
-  ratingPill: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full },
+  ratingPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full },
   ratingPillText: { fontSize: FONT_SIZE.sm, fontWeight: '600' },
   caption: { fontSize: FONT_SIZE.md, marginBottom: SPACING.md, lineHeight: 22 },
   itemsRow: { marginBottom: SPACING.md },

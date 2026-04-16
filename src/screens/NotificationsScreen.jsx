@@ -12,6 +12,7 @@ import {
 } from '../services/notifications';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import GeminiHangerIcon from '../components/GeminiHangerIcon';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 function timeAgo(date) {
@@ -26,7 +27,6 @@ function timeAgo(date) {
 
 const TYPE_ICON = {
   follow: '👤',
-  rating: '★',
   save:   '🔖',
 };
 
@@ -197,9 +197,13 @@ export default function NotificationsScreen({ navigation }) {
                     </View>
                   )}
                   <View style={[styles.typeIcon, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.typeIconText, item.type === 'rating' && { color: COLORS.star }]}>
-                      {TYPE_ICON[item.type] ?? '🔔'}
-                    </Text>
+                    {item.type === 'rating' ? (
+                      <GeminiHangerIcon size={11} />
+                    ) : (
+                      <Text style={styles.typeIconText}>
+                        {TYPE_ICON[item.type] ?? '🔔'}
+                      </Text>
+                    )}
                   </View>
                 </View>
 

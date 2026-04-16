@@ -29,6 +29,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import CameraScreen from '../screens/CameraScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import AvatarBuilderScreen from '../screens/AvatarBuilderScreen';
+import GeminiHangerIcon from '../components/GeminiHangerIcon';
 
 import { COLORS } from '../constants/theme';
 
@@ -39,7 +40,7 @@ const Tab = createBottomTabNavigator();
 
 const TAB_CONFIG = [
   { name: 'CameraTab', icon: '📷', label: 'Camera', isAction: true },
-  { name: 'Closet',    icon: '👗', label: 'Closet' },
+  { name: 'Closet',    icon: 'gemini', label: 'Closet' },
   { name: 'Feed',      icon: '🏠', label: 'Home' },
   { name: 'Discover',  icon: '🔍', label: 'Explore' },
   { name: 'Profile',   icon: '👤', label: 'Me' },
@@ -80,7 +81,11 @@ function CustomTabBar({ state, navigation }) {
           if (tab.isAction) {
             return (
               <TouchableOpacity key={tab.name} style={tabStyles.tabItem} onPress={onPress} activeOpacity={0.7}>
-                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
+                {tab.icon === 'gemini' ? (
+                  <GeminiHangerIcon size={24} tone="solid" color={colors.textMuted} />
+                ) : (
+                  <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
+                )}
               </TouchableOpacity>
             );
           }
@@ -89,10 +94,18 @@ function CustomTabBar({ state, navigation }) {
             <TouchableOpacity key={tab.name} style={tabStyles.tabItem} onPress={onPress} activeOpacity={0.7}>
               {focused ? (
                 <View style={tabStyles.pill}>
-                  <Text style={tabStyles.pillIcon}>{tab.icon}</Text>
+                  {tab.icon === 'gemini' ? (
+                    <GeminiHangerIcon size={20} tone="solid" color={COLORS.white} />
+                  ) : (
+                    <Text style={tabStyles.pillIcon}>{tab.icon}</Text>
+                  )}
                 </View>
               ) : (
-                <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
+                tab.icon === 'gemini' ? (
+                  <GeminiHangerIcon size={24} tone="solid" color={colors.textMuted} />
+                ) : (
+                  <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
+                )
               )}
             </TouchableOpacity>
           );

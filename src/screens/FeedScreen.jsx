@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { FeedCardSkeleton } from '../components/SkeletonLoader';
 import { getUnreadCount } from '../services/notifications';
 import { useFocusEffect } from '@react-navigation/native';
+import GeminiHangerIcon from '../components/GeminiHangerIcon';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const COMMUNITIES_CACHE_KEY = 'user_communities_cache';
@@ -136,9 +137,13 @@ export default function FeedScreen({ navigation }) {
     return (
       <View style={styles.hangerRow}>
         {[1, 2, 3, 4, 5].map(i => (
-          <Text key={i} style={[styles.hangerIcon, i <= Math.round(rating) && styles.hangerFilled]}>
-            {'ʕ'}
-          </Text>
+          <GeminiHangerIcon
+            key={i}
+            size={16}
+            tone={i <= Math.round(rating) ? 'gradient' : 'solid'}
+            color={colors.border}
+            opacity={i <= Math.round(rating) ? 1 : 0.8}
+          />
         ))}
         <Text style={[styles.ratingText, { color: colors.textPrimary }]}>{rating.toFixed(1)}</Text>
         <Text style={[styles.ratingCount, { color: colors.textSecondary }]}>({count})</Text>
@@ -349,9 +354,7 @@ const styles = StyleSheet.create({
   followBtnText: { color: COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: '700' },
   outfitImage: { width: '100%' },
   cardFooter: { padding: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1 },
-  hangerRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  hangerIcon: { fontSize: 18, color: COLORS.border },
-  hangerFilled: { color: COLORS.primary },
+  hangerRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   ratingText: { fontSize: FONT_SIZE.md, fontWeight: '700', marginLeft: 6 },
   ratingCount: { fontSize: FONT_SIZE.sm, marginLeft: 2 },
   savesText: { fontSize: FONT_SIZE.sm },

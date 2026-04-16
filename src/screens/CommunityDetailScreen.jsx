@@ -6,6 +6,7 @@ import { getCommunityOutfits } from '../services/outfits';
 import { getCommunity, joinCommunity, leaveCommunity, isJoined } from '../services/communities';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import GeminiHangerIcon from '../components/GeminiHangerIcon';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export default function CommunityDetailScreen({ navigation, route }) {
@@ -54,11 +55,17 @@ export default function CommunityDetailScreen({ navigation, route }) {
     }
   }
 
-  function StarRow({ rating }) {
+  function RatingRow({ rating }) {
     return (
       <View style={styles.starRow}>
         {[1, 2, 3, 4, 5].map(i => (
-          <Text key={i} style={{ fontSize: 12, color: i <= Math.round(rating) ? COLORS.star : COLORS.border }}>★</Text>
+          <GeminiHangerIcon
+            key={i}
+            size={10}
+            tone={i <= Math.round(rating) ? 'gradient' : 'solid'}
+            color={COLORS.white}
+            opacity={i <= Math.round(rating) ? 1 : 0.35}
+          />
         ))}
       </View>
     );
@@ -129,7 +136,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
           >
             <Image source={{ uri: item.imageURL }} style={styles.gridImage} resizeMode="cover" />
             <View style={styles.gridOverlay}>
-              <StarRow rating={item.avgRating ?? 0} />
+              <RatingRow rating={item.avgRating ?? 0} />
               <Text style={styles.gridRating}>{(item.avgRating ?? 0).toFixed(1)}</Text>
             </View>
           </TouchableOpacity>

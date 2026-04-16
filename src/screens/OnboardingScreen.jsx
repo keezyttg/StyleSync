@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
+import GeminiHangerIcon from '../components/GeminiHangerIcon';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 export const ONBOARDING_KEY = 'stylesync_onboarding_done';
@@ -24,6 +25,13 @@ const AESTHETICS = [
   { id: 'Luxury',          emoji: '💎' },
   { id: 'Grunge',          emoji: '🎸' },
   { id: 'Preppy',          emoji: '🎓' },
+];
+
+const FEATURE_ITEMS = [
+  { id: 'closet', label: 'Add clothes to your closet', icon: 'gemini' },
+  { id: 'build', label: 'Build and post outfits', icon: '⊞' },
+  { id: 'discover', label: 'Discover styles & people', icon: '🔍' },
+  { id: 'rate', label: 'Rate outfits & get rated', icon: 'gemini' },
 ];
 
 export default function OnboardingScreen({ navigation }) {
@@ -84,7 +92,9 @@ export default function OnboardingScreen({ navigation }) {
             <Text style={styles.logoBlack}>Style</Text>
             <Text style={styles.logoMagenta}>Sync</Text>
           </View>
-          <Text style={styles.welcomeEmoji}>👗</Text>
+          <View style={styles.welcomeIconWrap}>
+            <GeminiHangerIcon size={88} />
+          </View>
           <Text style={styles.h1}>Your wardrobe,{'\n'}elevated.</Text>
           <Text style={styles.sub}>
             Track every piece, build outfits, share your style, and discover what the world is wearing.
@@ -143,15 +153,16 @@ export default function OnboardingScreen({ navigation }) {
           </Text>
 
           <View style={styles.featureList}>
-            {[
-              ['👗', 'Add clothes to your closet'],
-              ['⊞',  'Build and post outfits'],
-              ['🔍', 'Discover styles & people'],
-              ['★',  'Rate outfits & get rated'],
-            ].map(([icon, label]) => (
-              <View key={label} style={styles.featureRow}>
-                <Text style={styles.featureIcon}>{icon}</Text>
-                <Text style={styles.featureLabel}>{label}</Text>
+            {FEATURE_ITEMS.map(item => (
+              <View key={item.id} style={styles.featureRow}>
+                {item.icon === 'gemini' ? (
+                  <View style={styles.featureGeminiWrap}>
+                    <GeminiHangerIcon size={24} />
+                  </View>
+                ) : (
+                  <Text style={styles.featureIcon}>{item.icon}</Text>
+                )}
+                <Text style={styles.featureLabel}>{item.label}</Text>
               </View>
             ))}
           </View>
@@ -179,7 +190,7 @@ const styles = StyleSheet.create({
   logoRow: { flexDirection: 'row', marginBottom: SPACING.xl },
   logoBlack: { fontSize: 28, fontWeight: '900', color: COLORS.textPrimary },
   logoMagenta: { fontSize: 28, fontStyle: 'italic', color: COLORS.primary },
-  welcomeEmoji: { fontSize: 72, marginBottom: SPACING.lg },
+  welcomeIconWrap: { marginBottom: SPACING.lg },
   readyEmoji: { fontSize: 72, marginBottom: SPACING.lg },
   h1: { fontSize: 34, fontWeight: '900', color: COLORS.textPrimary, textAlign: 'center', lineHeight: 42, marginBottom: SPACING.md },
   sub: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: SPACING.lg },
@@ -213,6 +224,7 @@ const styles = StyleSheet.create({
   featureList: { width: '100%', gap: SPACING.md, marginTop: SPACING.sm },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   featureIcon: { fontSize: 24, width: 36, textAlign: 'center' },
+  featureGeminiWrap: { width: 36, alignItems: 'center', justifyContent: 'center' },
   featureLabel: { fontSize: FONT_SIZE.md, color: COLORS.textPrimary, fontWeight: '500' },
   // Dots
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 40 },
