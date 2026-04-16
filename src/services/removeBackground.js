@@ -17,14 +17,12 @@ export async function removeBackground(imageUri) {
     throw new Error(msg);
   }
 
-  // Response is binary PNG — save to cache so React Native can use it as a URI
-  const blob = await res.blob();
-  const base64 = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+  // Response is binary PNG — convert to base64 without FileReader (not available in Hermes)
+  const arrayBuffer = await res.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < uint8Array.length; i++) binary += String.fromCharCode(uint8Array[i]);
+  const base64 = btoa(binary);
 
   const localUri = `${FileSystem.cacheDirectory}bg_${Date.now()}.png`;
   await FileSystem.writeAsStringAsync(localUri, base64, { encoding: 'base64' });
