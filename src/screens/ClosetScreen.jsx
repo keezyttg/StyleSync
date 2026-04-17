@@ -114,6 +114,11 @@ export default function ClosetScreen({ navigation }) {
 
   useEffect(() => { load(); }, [load]);
 
+  function handleEditDone(updatedItem) {
+    setItems(prev => prev.map(i => i.id === updatedItem.id ? { ...i, ...updatedItem } : i));
+    setEnlargedItem(prev => prev?.id === updatedItem.id ? { ...prev, ...updatedItem } : prev);
+  }
+
   const sortedItems = useMemo(() => {
     const arr = [...items];
     switch (sort) {
@@ -290,6 +295,18 @@ export default function ClosetScreen({ navigation }) {
                     </View>
                   )}
                 </View>
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={() => {
+                    setEnlargedItem(null);
+                    navigation.navigate('EditItem', {
+                      item: enlargedItem,
+                      onDone: handleEditDone,
+                    });
+                  }}
+                >
+                  <Text style={styles.editBtnText}>Edit Item</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(enlargedItem)}>
                   <Text style={styles.deleteBtnText}>Delete Item</Text>
                 </TouchableOpacity>
@@ -363,7 +380,9 @@ const styles = StyleSheet.create({
   modalStat: { alignItems: 'center' },
   modalStatValue: { fontSize: FONT_SIZE.md, fontWeight: '800', color: COLORS.textPrimary },
   modalStatLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
-  deleteBtn: { marginTop: SPACING.md, paddingVertical: 12, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: '#ef4444', alignItems: 'center' },
+  editBtn: { marginTop: SPACING.md, paddingVertical: 12, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  editBtnText: { color: COLORS.textPrimary, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  deleteBtn: { marginTop: SPACING.sm, paddingVertical: 12, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: '#ef4444', alignItems: 'center' },
   deleteBtnText: { color: '#ef4444', fontWeight: '700', fontSize: FONT_SIZE.sm },
   deleteAction: { backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center', width: 80, marginBottom: SPACING.sm, borderRadius: BORDER_RADIUS.lg },
   deleteActionIcon: { fontSize: 18 },

@@ -29,6 +29,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import CameraScreen from '../screens/CameraScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import AvatarBuilderScreen from '../screens/AvatarBuilderScreen';
+import EditItemScreen from '../screens/EditItemScreen';
 import GeminiHangerIcon from '../components/GeminiHangerIcon';
 
 import { COLORS } from '../constants/theme';
@@ -165,6 +166,7 @@ function AppStack() {
       <Stack.Screen name="EditProfile"     component={EditProfileScreen}     options={{ presentation: 'modal' }} />
       <Stack.Screen name="UserProfile"     component={UserProfileScreen} />
       <Stack.Screen name="AvatarBuilder"   component={AvatarBuilderScreen} />
+      <Stack.Screen name="EditItem"        component={EditItemScreen}        options={{ presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }

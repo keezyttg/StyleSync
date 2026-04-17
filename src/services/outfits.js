@@ -204,6 +204,16 @@ export async function isSaved(userId, outfitId) {
   return !snap.empty;
 }
 
+export async function reportOutfit(outfitId, reporterUid, reportedUserId, reason) {
+  await addDoc(collection(db, 'reports'), {
+    outfitId,
+    reporterUid,
+    reportedUserId,
+    reason,
+    createdAt: serverTimestamp(),
+  });
+}
+
 export async function saveOutfit(userId, outfitId) {
   const already = await isSaved(userId, outfitId);
   if (already) return; // already saved — don't create a duplicate

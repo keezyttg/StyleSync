@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Share } from 'react-native';
-import { rateOutfit, saveOutfit, isSaved, deleteOutfit } from '../services/outfits';
+import { rateOutfit, saveOutfit, isSaved, deleteOutfit, reportOutfit } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPushToken, sendPushNotification, saveNotification } from '../services/notifications';
@@ -45,6 +45,28 @@ export default function OutfitDetailScreen({ route, navigation }) {
     } catch (err) {
       Alert.alert('Error', err.message);
     }
+  }
+
+  function handleReport() {
+    const REASONS = ['Spam', 'Inappropriate content', 'Harassment', 'Other'];
+    Alert.alert(
+      'Report Post',
+      'Why are you reporting this?',
+      [
+        ...REASONS.map(reason => ({
+          text: reason,
+          onPress: async () => {
+            try {
+              await reportOutfit(outfit.id, user.uid, outfit.userId, reason);
+              Alert.alert('Report submitted', "Thanks for letting us know. We'll review this post.");
+            } catch {
+              Alert.alert('Error', 'Could not submit report. Please try again.');
+            }
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   }
 
   async function handleShare() {
@@ -109,9 +131,13 @@ export default function OutfitDetailScreen({ route, navigation }) {
         <TouchableOpacity style={styles.overlayBtn} onPress={handleShare}>
           <Text style={styles.overlayBtnText}>⬆</Text>
         </TouchableOpacity>
-        {isOwner && (
+        {isOwner ? (
           <TouchableOpacity style={styles.overlayBtn} onPress={handleDelete}>
             <Text style={styles.overlayBtnText}>🗑</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.overlayBtn} onPress={handleReport}>
+            <Text style={styles.overlayBtnText}>⚑</Text>
           </TouchableOpacity>
         )}
       </View>

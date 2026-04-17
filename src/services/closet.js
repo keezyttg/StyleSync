@@ -7,7 +7,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -63,6 +62,13 @@ export async function decrementWornCount(userId, itemId, price, currentWorn) {
     wornCount: newWorn,
     costPerWear,
   });
+}
+
+export async function updateClothingItem(userId, itemId, updates) {
+  const { price, wornCount } = updates;
+  const costPerWear =
+    price > 0 && wornCount > 0 ? Math.round((price / wornCount) * 100) / 100 : price ?? 0;
+  await updateDoc(doc(db, 'users', userId, 'closet', itemId), { ...updates, costPerWear });
 }
 
 export async function deleteClothingItem(userId, itemId) {
