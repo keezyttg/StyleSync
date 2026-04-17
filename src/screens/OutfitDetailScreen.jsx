@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Share } from 'react-native';
-import { rateOutfit, saveOutfit, isSaved, deleteOutfit, reportOutfit } from '../services/outfits';
+import { rateOutfit, saveOutfit, isSaved, deleteOutfit, reportOutfit, getUserRating } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPushToken, sendPushNotification, saveNotification } from '../services/notifications';
@@ -19,16 +19,18 @@ export default function OutfitDetailScreen({ route, navigation }) {
   useEffect(() => {
     if (user && outfit.id) {
       isSaved(user.uid, outfit.id).then(setSaved).catch(() => {});
+      getUserRating(outfit.id, user.uid).then(setUserRating).catch(() => {});
     }
   }, [user, outfit.id]);
 
   async function handleRate(value) {
     if (!user) return;
     try {
+      const isFirstRating = userRating === 0;
       await rateOutfit(outfit.id, user.uid, value);
       setUserRating(value);
-      // Notify outfit owner (skip if rating own outfit)
-      if (outfit.userId && outfit.userId !== user.uid) {
+      // Notify outfit owner only on first-ever rating (not re-rates)
+      if (isFirstRating && outfit.userId && outfit.userId !== user.uid) {
         const token = await getUserPushToken(outfit.userId);
         const raterName = user.displayName || 'Someone';
         sendPushNotification(token, 'New Rating', `${raterName} rated your outfit ${value}/5`);

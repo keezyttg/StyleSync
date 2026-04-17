@@ -123,6 +123,15 @@ export async function getUserOutfits(userId) {
   return docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
 }
 
+export async function getUserRating(outfitId, userId) {
+  try {
+    const snap = await getDoc(doc(db, 'outfits', outfitId, 'ratings', userId));
+    return snap.exists() ? snap.data().value : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function rateOutfit(outfitId, userId, value) {
   const ratingRef = doc(db, 'outfits', outfitId, 'ratings', userId);
 
