@@ -66,7 +66,7 @@ function BaseAvatar({ skinId }) {
 }
 
 // Photo overlay for one clothing slot
-function SlotOverlay({ category, item, onPress }) {
+function SlotOverlay({ category, item, onPress, isActive }) {
   const b = SLOT_BOUNDS[category];
   if (!b) return null;
 
@@ -76,6 +76,7 @@ function SlotOverlay({ category, item, onPress }) {
   const height = b.h * SY;
 
   if (!item) {
+    if (!isActive) return null;
     return (
       <TouchableOpacity
         style={[styles.slotEmpty, { left, top, width, height }]}
@@ -83,7 +84,6 @@ function SlotOverlay({ category, item, onPress }) {
         activeOpacity={0.7}
       >
         <Text style={styles.slotEmptyIcon}>+</Text>
-        <Text style={styles.slotEmptyLabel}>{category}</Text>
       </TouchableOpacity>
     );
   }
@@ -130,18 +130,40 @@ export default function AvatarBuilderScreen({ navigation }) {
   }, [user]);
 
   function selectItem(category, item) {
-    setSelectedItems(prev => ({ ...prev, [category]: item }));
+    if (category === 'Accessories') {
+      setSelectedItems(prev => {
+        const current = prev.Accessories ?? [];
+        const exists = current.some(i => i.id === item.id);
+        return { ...prev, Accessories: exists ? current.filter(i => i.id !== item.id) : [...current, item] };
+      });
+    } else {
+      setSelectedItems(prev => ({ ...prev, [category]: item }));
+    }
   }
 
   function clearItem(category) {
-    setSelectedItems(prev => { const n = { ...prev }; delete n[category]; return n; });
+    if (category === 'Accessories') {
+      setSelectedItems(prev => ({ ...prev, Accessories: [] }));
+    } else {
+      setSelectedItems(prev => { const n = { ...prev }; delete n[category]; return n; });
+    }
   }
 
   function randomize() {
     const newSelected = {};
     CLOSET_CATEGORIES.forEach(cat => {
       const items = closetByCategory[cat] ?? [];
-      if (items.length > 0) newSelected[cat] = items[Math.floor(Math.random() * items.length)];
+      if (cat === 'Accessories') {
+        // 50% chance to include accessories; pick 1–2 randomly
+        if (items.length > 0 && Math.random() > 0.5) {
+          const shuffled = [...items].sort(() => Math.random() - 0.5);
+          newSelected[cat] = shuffled.slice(0, Math.min(items.length, Math.ceil(Math.random() * 2)));
+        } else {
+          newSelected[cat] = [];
+        }
+      } else if (items.length > 0) {
+        newSelected[cat] = items[Math.floor(Math.random() * items.length)];
+      }
     });
     setSelectedItems(newSelected);
     setSkinId(SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)].id);
@@ -169,20 +191,26 @@ export default function AvatarBuilderScreen({ navigation }) {
         <TouchableOpacity
           style={styles.nextBtn}
           onPress={() => {
-            const items = Object.values(selectedItems);
+            const items = Object.entries(selectedItems).flatMap(([cat, val]) =>
+              cat === 'Accessories' ? (Array.isArray(val) ? val : []) : (val ? [val] : [])
+            );
             if (items.length === 0) { Alert.alert('Select at least one item'); return; }
             navigation.navigate('Post', { preselectedItems: items });
           }}
         >
           <Text style={styles.nextBtnText}>
-            Next{Object.keys(selectedItems).length > 0 ? ` (${Object.keys(selectedItems).length})` : ''}
+            {(() => {
+              const count = Object.entries(selectedItems).reduce((sum, [cat, val]) =>
+                sum + (cat === 'Accessories' ? (Array.isArray(val) ? val.length : 0) : (val ? 1 : 0)), 0);
+              return count > 0 ? `Next (${count})` : 'Next';
+            })()}
           </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Avatar stage */}
-        <View style={[styles.avatarStage, { backgroundColor: isDark ? colors.card : '#eef5ff' }]}>
+        <View style={[styles.avatarStage, { backgroundColor: isDark ? colors.card : '#f5f5f3' }]}>
           {loading ? (
             <View style={{ width: AVATAR_W, height: AVATAR_H, justifyContent: 'center', alignItems: 'center' }}>
               <ActivityIndicator color={COLORS.primary} size="large" />
@@ -195,8 +223,11 @@ export default function AvatarBuilderScreen({ navigation }) {
                 <SlotOverlay
                   key={cat}
                   category={cat}
-                  item={selectedItems[cat] ?? null}
+                  item={cat === 'Accessories'
+                    ? (selectedItems.Accessories?.[0] ?? null)
+                    : (selectedItems[cat] ?? null)}
                   onPress={() => setActiveTab(cat)}
+                  isActive={activeTab === cat}
                 />
               ))}
             </View>
@@ -205,19 +236,26 @@ export default function AvatarBuilderScreen({ navigation }) {
           {/* Selected item strip below avatar */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectedStrip} contentContainerStyle={styles.selectedStripContent}>
             {CLOSET_CATEGORIES.map(cat => {
-              const item = selectedItems[cat];
+              const isAcc = cat === 'Accessories';
+              const accItems = isAcc ? (selectedItems.Accessories ?? []) : [];
+              const item = isAcc ? (accItems[0] ?? null) : (selectedItems[cat] ?? null);
+              const hasItem = isAcc ? accItems.length > 0 : !!item;
               return (
-                <View key={cat} style={[styles.stripSlot, { borderColor: item ? COLORS.primary : colors.border, backgroundColor: colors.surface }]}>
-                  {item ? (
+                <View key={cat} style={[styles.stripSlot, { borderColor: hasItem ? COLORS.primary : colors.border, backgroundColor: colors.surface }]}>
+                  {hasItem ? (
                     <>
                       <Image source={{ uri: item.imageURL }} style={styles.stripThumb} />
+                      {isAcc && accItems.length > 1 && (
+                        <View style={styles.accCountBadge}>
+                          <Text style={styles.accCountText}>+{accItems.length - 1}</Text>
+                        </View>
+                      )}
                       <TouchableOpacity style={styles.stripClear} onPress={() => clearItem(cat)}>
                         <Text style={styles.stripClearText}>✕</Text>
                       </TouchableOpacity>
                     </>
                   ) : (
                     <TouchableOpacity style={styles.stripEmpty} onPress={() => setActiveTab(cat)}>
-                      <Text style={[styles.stripEmptyCat, { color: colors.textMuted }]}>{cat.slice(0, 3)}</Text>
                       <Text style={[styles.stripEmptyPlus, { color: colors.border }]}>+</Text>
                     </TouchableOpacity>
                   )}
@@ -298,7 +336,9 @@ export default function AvatarBuilderScreen({ navigation }) {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerRow}>
               {currentItems.map(item => {
-                const isSelected = selectedItems[activeTab]?.id === item.id;
+                const isSelected = activeTab === 'Accessories'
+                  ? (selectedItems.Accessories ?? []).some(i => i.id === item.id)
+                  : selectedItems[activeTab]?.id === item.id;
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -346,15 +386,14 @@ const styles = StyleSheet.create({
   slotEmpty: {
     position: 'absolute',
     borderWidth: 1.5,
-    borderColor: 'rgba(150,150,150,0.35)',
+    borderColor: COLORS.primary + '80',
     borderStyle: 'dashed',
-    borderRadius: 10,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: COLORS.primary + '12',
   },
-  slotEmptyIcon: { fontSize: 18, color: 'rgba(150,150,150,0.7)', lineHeight: 22 },
-  slotEmptyLabel: { fontSize: 8, color: 'rgba(150,150,150,0.7)', fontWeight: '700', letterSpacing: 0.4, marginTop: 1 },
+  slotEmptyIcon: { fontSize: 22, color: COLORS.primary, lineHeight: 26, fontWeight: '300' },
 
   slotFilled: {
     position: 'absolute',
@@ -371,8 +410,10 @@ const styles = StyleSheet.create({
 
   selectedStrip: { flexGrow: 0, marginTop: SPACING.sm },
   selectedStripContent: { paddingHorizontal: SPACING.md, gap: SPACING.sm, paddingBottom: SPACING.sm },
-  stripSlot: { width: 52, height: 52, borderRadius: BORDER_RADIUS.md, borderWidth: 1.5, overflow: 'hidden' },
+  stripSlot: { width: 62, height: 62, borderRadius: BORDER_RADIUS.md, borderWidth: 1.5, overflow: 'hidden' },
   stripThumb: { width: '100%', height: '100%' },
+  accCountBadge: { position: 'absolute', bottom: 2, left: 2, backgroundColor: COLORS.primary, borderRadius: 6, paddingHorizontal: 4, paddingVertical: 1 },
+  accCountText: { color: '#fff', fontSize: 9, fontWeight: '800' },
   stripClear: { position: 'absolute', top: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' },
   stripClearText: { color: '#fff', fontSize: 9, fontWeight: '800' },
   stripEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center' },

@@ -223,14 +223,17 @@ export async function reportOutfit(outfitId, reporterUid, reportedUserId, reason
   });
 }
 
-export async function saveOutfit(userId, outfitId) {
+export async function saveOutfit(userId, outfitId, outfitOwnerId) {
   const already = await isSaved(userId, outfitId);
-  if (already) return; // already saved — don't create a duplicate
+  if (already) return;
   await addDoc(collection(db, 'users', userId, 'saved'), {
     outfitId,
     savedAt: serverTimestamp(),
   });
-  await updateDoc(doc(db, 'outfits', outfitId), {
-    saves: increment(1),
-  });
+  // Only increment saves count for other people's outfits (owner saving own post shouldn't inflate count)
+  if (outfitOwnerId && userId !== outfitOwnerId) {
+    await updateDoc(doc(db, 'outfits', outfitId), {
+      saves: increment(1),
+    });
+  }
 }

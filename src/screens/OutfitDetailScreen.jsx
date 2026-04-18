@@ -110,7 +110,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
   async function handleSave() {
     if (!user || saved) return;
     try {
-      await saveOutfit(user.uid, outfit.id);
+      await saveOutfit(user.uid, outfit.id, outfit.userId);
       setSaved(true);
       setSaveMsg(true);
       setTimeout(() => setSaveMsg(false), 2000);
@@ -263,7 +263,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
         )}
 
         <TouchableOpacity
-          style={[styles.saveOutfitBtn, { backgroundColor: colors.textPrimary }, saved && [styles.saveOutfitBtnSaved, { backgroundColor: colors.surface, borderColor: colors.border }]]}
+          style={[styles.saveOutfitBtn, saved && { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
           onPress={handleSave}
         >
           <Text style={[styles.saveOutfitText, saved && { color: colors.textPrimary }]}>
@@ -334,8 +334,7 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: FONT_SIZE.md, fontWeight: '800' },
   deleteOutfitBtn: { borderWidth: 1, borderColor: COLORS.error, borderRadius: BORDER_RADIUS.md, paddingVertical: 12, alignItems: 'center', marginBottom: SPACING.sm },
   deleteOutfitText: { color: COLORS.error, fontSize: FONT_SIZE.md, fontWeight: '600' },
-  saveOutfitBtn: { borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.md },
-  saveOutfitBtnSaved: { borderWidth: 1 },
+  saveOutfitBtn: { borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.md, backgroundColor: COLORS.primary },
   saveOutfitText: { color: COLORS.white, fontSize: FONT_SIZE.md, fontWeight: '700' },
   shopSection: { marginBottom: SPACING.xl },
   shopTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', marginBottom: SPACING.sm },
