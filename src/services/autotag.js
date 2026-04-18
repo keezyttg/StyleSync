@@ -9,5 +9,9 @@ export async function autoTagImage(imageUri) {
 
   const autoTag = httpsCallable(getFunctions(app), 'autoTagImage');
   const result = await autoTag({ imageBase64: base64 });
-  return result.data.tags ?? [];
+  return {
+    tags:     result.data.tags     ?? [],
+    category: result.data.category ?? null,
+    color:    result.data.color    ?? null,
+  };
 }

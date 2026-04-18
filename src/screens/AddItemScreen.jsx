@@ -51,9 +51,15 @@ export default function AddItemScreen({ navigation }) {
   async function runAutoTag(uri) {
     setTagging(true);
     try {
-      const tags = await autoTagImage(uri);
+      const { tags, category: detectedCategory, color } = await autoTagImage(uri);
       if (tags.length > 0) {
         setSelectedTags(prev => [...new Set([...prev, ...tags])]);
+      }
+      if (detectedCategory && CATEGORIES.includes(detectedCategory)) {
+        setCategory(detectedCategory);
+      }
+      if (color && !name) {
+        setName(color + ' ');
       }
     } catch {
       // silently skip — autotag is best-effort
