@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Share } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Share, Linking } from 'react-native';
 import { rateOutfit, saveOutfit, isSaved, deleteOutfit, reportOutfit, getUserRating } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
@@ -121,6 +121,37 @@ export default function OutfitDetailScreen({ route, navigation }) {
 
   const HANGERS = [5, 4, 3, 2, 1];
 
+  const MAJOR_BRANDS = {
+    nike: 'https://www.nike.com/search?q=',
+    adidas: 'https://www.adidas.com/us/search?q=',
+    zara: 'https://www.zara.com/us/en/search?searchTerm=',
+    'h&m': 'https://www2.hm.com/en_us/search-results.html?q=',
+    hm: 'https://www2.hm.com/en_us/search-results.html?q=',
+    gucci: 'https://www.gucci.com/us/en/search?q=',
+    prada: 'https://www.prada.com/us/en/search.html?q=',
+    supreme: 'https://www.supremenewyork.com/search#',
+    uniqlo: 'https://www.uniqlo.com/us/en/search?q=',
+    'new balance': 'https://www.newbalance.com/search?q=',
+    newbalance: 'https://www.newbalance.com/search?q=',
+    "levi's": 'https://www.levi.com/US/en_US/search?q=',
+    levis: 'https://www.levi.com/US/en_US/search?q=',
+    gap: 'https://www.gap.com/browse/search.do?searchText=',
+    'ralph lauren': 'https://www.ralphlauren.com/search?q=',
+    'calvin klein': 'https://www.calvinklein.us/search?q=',
+    'tommy hilfiger': 'https://usa.tommy.com/en/search?q=',
+    vans: 'https://www.vans.com/search?q=',
+    converse: 'https://www.converse.com/shop/search?q=',
+    'north face': 'https://www.thenorthface.com/search?q=',
+    patagonia: 'https://www.patagonia.com/search/?q=',
+  };
+
+  function getShopUrl(item) {
+    const brand = (item.brand ?? '').toLowerCase().trim();
+    const query = encodeURIComponent([item.brand, item.name].filter(Boolean).join(' '));
+    if (brand && MAJOR_BRANDS[brand]) return MAJOR_BRANDS[brand] + query;
+    return `https://www.google.com/search?q=${query}&tbm=shop`;
+  }
+
   return (
     <View style={styles.container}>
       <Image source={{ uri: outfit.imageURL }} style={styles.image} resizeMode="cover" />
@@ -239,6 +270,31 @@ export default function OutfitDetailScreen({ route, navigation }) {
             {saved ? '🔖 Saved' : '+ Save Outfit'}
           </Text>
         </TouchableOpacity>
+
+        {outfit.items && outfit.items.length > 0 && (
+          <View style={styles.shopSection}>
+            <Text style={[styles.shopTitle, { color: colors.textPrimary }]}>Shop the Look</Text>
+            {outfit.items.map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.shopRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => Linking.openURL(getShopUrl(item))}
+                activeOpacity={0.7}
+              >
+                <Image source={{ uri: item.imageURL }} style={styles.shopThumb} resizeMode="cover" />
+                <View style={styles.shopInfo}>
+                  <Text style={[styles.shopItemName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+                  <Text style={[styles.shopItemMeta, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {item.brand ? item.brand : item.category}
+                  </Text>
+                </View>
+                <View style={styles.shopBtnWrap}>
+                  <Text style={styles.shopBtnText}>Shop →</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -278,7 +334,16 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: FONT_SIZE.md, fontWeight: '800' },
   deleteOutfitBtn: { borderWidth: 1, borderColor: COLORS.error, borderRadius: BORDER_RADIUS.md, paddingVertical: 12, alignItems: 'center', marginBottom: SPACING.sm },
   deleteOutfitText: { color: COLORS.error, fontSize: FONT_SIZE.md, fontWeight: '600' },
-  saveOutfitBtn: { borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.xl },
+  saveOutfitBtn: { borderRadius: BORDER_RADIUS.md, paddingVertical: 14, alignItems: 'center', marginBottom: SPACING.md },
   saveOutfitBtnSaved: { borderWidth: 1 },
   saveOutfitText: { color: COLORS.white, fontSize: FONT_SIZE.md, fontWeight: '700' },
+  shopSection: { marginBottom: SPACING.xl },
+  shopTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', marginBottom: SPACING.sm },
+  shopRow: { flexDirection: 'row', alignItems: 'center', borderRadius: BORDER_RADIUS.md, borderWidth: 1, marginBottom: SPACING.sm, overflow: 'hidden' },
+  shopThumb: { width: 56, height: 56 },
+  shopInfo: { flex: 1, paddingHorizontal: SPACING.sm },
+  shopItemName: { fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  shopItemMeta: { fontSize: FONT_SIZE.xs, marginTop: 2 },
+  shopBtnWrap: { paddingHorizontal: SPACING.md },
+  shopBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.primary },
 });
