@@ -1,82 +1,69 @@
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const vision = require('@google-cloud/vision');
+// StyleSync autoTagImage v2
+const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
+const Anthropic = require('@anthropic-ai/sdk');
 
-const visionClient = new vision.ImageAnnotatorClient();
+const anthropicKey = defineSecret('ANTHROPIC_API_KEY');
 
-const CATEGORY_KEYWORDS = {
-  Tops:       ['shirt', 't-shirt', 'tshirt', 'blouse', 'top', 'hoodie', 'sweater', 'sweatshirt', 'cardigan', 'tank', 'pullover', 'turtleneck', 'polo', 'jersey'],
-  Bottoms:    ['pants', 'jeans', 'trousers', 'shorts', 'skirt', 'leggings', 'joggers', 'chinos', 'slacks', 'denim'],
-  Outerwear:  ['jacket', 'coat', 'blazer', 'vest', 'parka', 'windbreaker', 'overcoat', 'raincoat', 'bomber'],
-  Shoes:      ['shoe', 'sneaker', 'boot', 'sandal', 'heel', 'loafer', 'oxford', 'trainer', 'slipper', 'flip flop'],
-  Accessories:['hat', 'cap', 'bag', 'belt', 'scarf', 'watch', 'jewelry', 'necklace', 'bracelet', 'sunglasses', 'glasses', 'purse', 'backpack', 'glove'],
-};
+exports.autoTagImage = onRequest(
+  { secrets: [anthropicKey], timeoutSeconds: 120, cors: true },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
 
-const STYLE_KEYWORDS = {
-  Formal:          ['suit', 'blazer', 'dress shirt', 'tie', 'formal', 'tuxedo'],
-  Streetwear:      ['hoodie', 'graphic', 'sneaker', 'tracksuit', 'cargo', 'beanie'],
-  Athleisure:      ['athletic', 'sport', 'gym', 'yoga', 'running', 'leggings', 'track', 'activewear'],
-  Vintage:         ['vintage', 'retro', 'classic', 'denim jacket', 'flannel'],
-  Minimalist:      ['plain', 'simple', 'neutral', 'monochrome', 'basic'],
-  'Business Casual':['chinos', 'polo', 'oxford', 'loafer', 'button'],
-  Casual:          ['t-shirt', 'jeans', 'shorts', 'casual', 'everyday'],
-};
+    const { imageBase64, mediaType = 'image/jpeg' } = req.body;
+    if (!imageBase64) {
+      res.status(400).json({ error: 'imageBase64 is required' });
+      return;
+    }
 
-function detectCategory(labels) {
-  const lower = labels.map(l => l.toLowerCase());
-  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some(kw => lower.some(l => l.includes(kw)))) return cat;
+    try {
+      const client = new Anthropic({ apiKey: anthropicKey.value() });
+
+      const message = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 256,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: imageBase64 },
+            },
+            {
+              type: 'text',
+              text: `Analyze this clothing item and return ONLY a JSON object with these fields:
+- "category": one of exactly ["Tops","Bottoms","Outerwear","Shoes","Accessories"]
+- "color": primary color like "Black", "White", "Navy Blue", "Gray", "Beige"
+- "itemType": specific item like "Hoodie", "Jeans", "Sneakers", "Jacket", "T-Shirt"
+- "brand": brand name if a logo is visible, otherwise null
+- "tags": array from exactly ["Casual","Formal","Streetwear","Vintage","Minimalist","Athleisure","Business Casual"]
+
+Reply with ONLY valid JSON. Example:
+{"category":"Tops","color":"Black","itemType":"Hoodie","brand":"Nike","tags":["Casual","Streetwear"]}`,
+            },
+          ],
+        }],
+      });
+
+      const raw = message.content[0].text.trim().replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/,'');
+      const parsed = JSON.parse(raw);
+
+      const VALID_CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
+      const VALID_TAGS = ['Casual', 'Formal', 'Streetwear', 'Vintage', 'Minimalist', 'Athleisure', 'Business Casual'];
+
+      const category = VALID_CATEGORIES.includes(parsed.category) ? parsed.category : null;
+      const tags = Array.isArray(parsed.tags) ? parsed.tags.filter(t => VALID_TAGS.includes(t)) : ['Casual'];
+      const color = typeof parsed.color === 'string' ? parsed.color : null;
+      const itemType = typeof parsed.itemType === 'string' ? parsed.itemType : null;
+      const brand = typeof parsed.brand === 'string' ? parsed.brand : null;
+      const suggestedName = [color, itemType].filter(Boolean).join(' ') || null;
+
+      res.json({ tags, category, color, brand, suggestedName });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
-  return null;
-}
-
-function detectStyleTags(labels) {
-  const text = labels.map(l => l.toLowerCase()).join(' ');
-  const found = Object.entries(STYLE_KEYWORDS)
-    .filter(([, keywords]) => keywords.some(kw => text.includes(kw)))
-    .map(([tag]) => tag);
-  return found.length > 0 ? found : ['Casual'];
-}
-
-function rgbToColorName({ red = 0, green = 0, blue = 0 }) {
-  const max = Math.max(red, green, blue);
-  if (max < 50) return 'Black';
-  if (red > 210 && green > 210 && blue > 210) return 'White';
-  const spread = Math.max(Math.abs(red - green), Math.abs(green - blue), Math.abs(red - blue));
-  if (spread < 35) return max < 100 ? 'Dark Gray' : max < 180 ? 'Gray' : 'Light Gray';
-  if (red > green && red > blue) return blue > 120 ? 'Pink' : red > 200 && green > 100 ? 'Orange' : 'Red';
-  if (green > red && green > blue) return 'Green';
-  if (blue > red && blue > green) return red > 120 ? 'Purple' : 'Blue';
-  if (red > 130 && green > 90 && blue < 60) return 'Brown';
-  if (red > 150 && green > 150 && blue < 80) return 'Yellow';
-  return 'Multicolor';
-}
-
-exports.autoTagImage = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Must be signed in.');
-  }
-
-  const { imageBase64 } = request.data;
-  if (!imageBase64) {
-    throw new HttpsError('invalid-argument', 'imageBase64 is required.');
-  }
-
-  const image = { content: imageBase64 };
-
-  const [labelResult, colorResult] = await Promise.all([
-    visionClient.labelDetection({ image }),
-    visionClient.imageProperties({ image }),
-  ]);
-
-  const labels = (labelResult[0].labelAnnotations ?? [])
-    .filter(l => l.score > 0.65)
-    .map(l => l.description);
-
-  const dominantColors = colorResult[0].imagePropertiesAnnotation?.dominantColors?.colors ?? [];
-  const color = dominantColors.length > 0 ? rgbToColorName(dominantColors[0].color) : null;
-
-  const category = detectCategory(labels);
-  const tags = detectStyleTags(labels);
-
-  return { tags, category, color };
-});
+);

@@ -51,18 +51,22 @@ export default function AddItemScreen({ navigation }) {
   async function runAutoTag(uri) {
     setTagging(true);
     try {
-      const { tags, category: detectedCategory, color } = await autoTagImage(uri);
+      const result = await autoTagImage(uri);
+      const { tags, category: detectedCategory, brand: detectedBrand, suggestedName } = result;
       if (tags.length > 0) {
         setSelectedTags(prev => [...new Set([...prev, ...tags])]);
       }
       if (detectedCategory && CATEGORIES.includes(detectedCategory)) {
         setCategory(detectedCategory);
       }
-      if (color && !name) {
-        setName(color + ' ');
+      if (suggestedName && !name) {
+        setName(suggestedName);
       }
-    } catch {
-      // silently skip — autotag is best-effort
+      if (detectedBrand && !brand) {
+        setBrand(detectedBrand);
+      }
+    } catch (err) {
+      Alert.alert('AutoTag Error', err?.message ?? String(err));
     } finally {
       setTagging(false);
     }
