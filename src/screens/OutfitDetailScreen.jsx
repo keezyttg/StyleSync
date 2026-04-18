@@ -164,6 +164,11 @@ export default function OutfitDetailScreen({ route, navigation }) {
             />
           </TouchableOpacity>
         ))}
+        {userRating > 0 && (
+          <View style={styles.ratedBadge}>
+            <Text style={styles.ratedBadgeText}>✓ Rated</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView style={[styles.sheet, { backgroundColor: colors.card }]}>
@@ -252,6 +257,8 @@ const styles = StyleSheet.create({
   hangerOverlay: { position: 'absolute', right: SPACING.md, bottom: '40%', alignItems: 'center', gap: 6 },
   hangerLabel: { color: COLORS.white, fontSize: FONT_SIZE.xs, fontWeight: '700', marginBottom: 2 },
   hangerBtn: { padding: 4 },
+  ratedBadge: { marginTop: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+  ratedBadgeText: { color: COLORS.white, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
   sheet: { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -24, paddingHorizontal: SPACING.md },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: SPACING.md, marginBottom: SPACING.md },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },

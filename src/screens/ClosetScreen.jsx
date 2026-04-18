@@ -113,6 +113,10 @@ export default function ClosetScreen({ navigation }) {
   }
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', load);
+    return unsub;
+  }, [navigation, load]);
 
   function handleEditDone(updatedItem) {
     setItems(prev => prev.map(i => i.id === updatedItem.id ? { ...i, ...updatedItem } : i));
