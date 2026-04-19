@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Switch, Linking, Dimensions } from 'react-native';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Switch, Linking, Dimensions, RefreshControl } from 'react-native';
 
 const ITEM_SIZE = (Dimensions.get('window').width - 4) / 2;
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,22 +19,45 @@ export default function ProfileScreen({ navigation }) {
   const [savedOutfits, setSavedOutfits] = useState([]);
   const [tab, setTab] = useState('My Outfits');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  const loadProfileData = useCallback(async ({ pullToRefresh = false } = {}) => {
+    if (!user) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    if (pullToRefresh) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      const [prof, outs, saved] = await Promise.all([
+        getUserProfile(user.uid),
+        getUserOutfits(user.uid),
+        getSavedOutfits(user.uid),
+      ]);
+      setProfile(prof);
+      setOutfits(outs);
+      setSavedOutfits(saved);
+    } catch {
+      // Keep the last-known state on refresh failures.
+    } finally {
+      if (pullToRefresh) setRefreshing(false);
+      else setLoading(false);
+    }
+  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!user) { setLoading(false); return; }
-      setLoading(true);
-      Promise.all([getUserProfile(user.uid), getUserOutfits(user.uid), getSavedOutfits(user.uid)])
-        .then(([prof, outs, saved]) => {
-          setProfile(prof);
-          setOutfits(outs);
-          setSavedOutfits(saved);
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }, [user])
+      loadProfileData();
+    }, [loadProfileData])
   );
+
+  const onRefresh = useCallback(() => {
+    loadProfileData({ pullToRefresh: true });
+  }, [loadProfileData]);
 
   // Recompute avg rating from actual outfit data
   const avgRating = outfits.length > 0
@@ -206,6 +229,7 @@ export default function ProfileScreen({ navigation }) {
             {tab === 'My Outfits' ? "You haven't posted any outfits yet." : "No saved outfits yet."}
           </Text>
         }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
     </View>

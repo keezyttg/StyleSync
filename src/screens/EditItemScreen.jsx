@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadItemImage, updateClothingItem, getCustomTags, saveCustomTags } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { ACCESSORY_PLACEMENTS, buildItemTags, getAccessoryPlacement, stripAccessoryPlacementTags } from '../constants/accessoryPlacement';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
@@ -22,6 +23,10 @@ export default function EditItemScreen({ navigation, route }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const item = route.params?.item ?? {};
+  const initialAccessoryPlacement = (() => {
+    const placement = getAccessoryPlacement(item);
+    return placement === 'default' ? null : placement;
+  })();
 
   const [imageUri, setImageUri] = useState(item.imageURL ?? null);
   const [imageChanged, setImageChanged] = useState(false);
@@ -31,8 +36,9 @@ export default function EditItemScreen({ navigation, route }) {
   const [brand, setBrand] = useState(item.brand ?? '');
   const [price, setPrice] = useState(item.price > 0 ? String(item.price) : '');
   const [currency, setCurrency] = useState(item.currency ?? '$');
-  const [selectedTags, setSelectedTags] = useState(item.tags ?? []);
+  const [selectedTags, setSelectedTags] = useState(stripAccessoryPlacementTags(item.tags ?? []));
   const [loading, setLoading] = useState(false);
+  const [accessoryPlacement, setAccessoryPlacement] = useState(initialAccessoryPlacement);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [customTags, setCustomTags] = useState([]);
   const [newTagInput, setNewTagInput] = useState('');
@@ -80,6 +86,10 @@ export default function EditItemScreen({ navigation, route }) {
   async function handleSave() {
     if (!name.trim()) { Alert.alert('Name required', 'Please enter a name for this item.'); return; }
     if (!category) { Alert.alert('Category required', 'Please select a category.'); return; }
+    if (category === 'Accessories' && !accessoryPlacement) {
+      Alert.alert('Placement required', 'Choose where this accessory should appear on the avatar.');
+      return;
+    }
     setLoading(true);
     try {
       let imageURL = item.imageURL;
@@ -93,7 +103,7 @@ export default function EditItemScreen({ navigation, route }) {
         brand: brand.trim(),
         price: parsedPrice,
         currency,
-        tags: selectedTags,
+        tags: buildItemTags(selectedTags, category, accessoryPlacement),
         wornCount: item.wornCount ?? 0,
       };
       await updateClothingItem(user.uid, item.id, updatedFields);
@@ -152,6 +162,32 @@ export default function EditItemScreen({ navigation, route }) {
             </TouchableOpacity>
           ))}
         </View>
+
+        {category === 'Accessories' && (
+          <>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>Accessory Placement *</Text>
+            <Text style={[styles.placementHelp, { color: colors.textSecondary }]}>
+              Tell Build Outfit where this piece belongs on the avatar.
+            </Text>
+            <View style={styles.chipRow}>
+              {ACCESSORY_PLACEMENTS.map(placement => (
+                <TouchableOpacity
+                  key={placement.id}
+                  style={[
+                    styles.chip,
+                    { borderColor: colors.border, backgroundColor: colors.surface },
+                    accessoryPlacement === placement.id && styles.chipActive,
+                  ]}
+                  onPress={() => setAccessoryPlacement(prev => prev === placement.id ? null : placement.id)}
+                >
+                  <Text style={[styles.chipText, { color: colors.textPrimary }, accessoryPlacement === placement.id && styles.chipTextActive]}>
+                    {placement.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         <Text style={[styles.label, { color: colors.textPrimary }]}>Brand</Text>
         <TextInput
@@ -283,6 +319,7 @@ const styles = StyleSheet.create({
   photoActions: { flexDirection: 'row', justifyContent: 'center', gap: SPACING.xl, marginBottom: SPACING.md },
   photoActionText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '600' },
   label: { fontSize: FONT_SIZE.sm, fontWeight: '600', marginBottom: SPACING.sm, marginTop: SPACING.md },
+  placementHelp: { fontSize: FONT_SIZE.xs, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
   input: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT_SIZE.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   chip: { paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },

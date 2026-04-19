@@ -9,6 +9,7 @@ import { autoTagImage } from '../services/autotag';
 import { removeBackground } from '../services/removeBackground';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { ACCESSORY_PLACEMENTS, buildItemTags } from '../constants/accessoryPlacement';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
@@ -34,6 +35,7 @@ export default function AddItemScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [tagging, setTagging] = useState(false);
   const [bgRemoving, setBgRemoving] = useState(false);
+  const [accessoryPlacement, setAccessoryPlacement] = useState(null);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [customTags, setCustomTags] = useState([]);
   const [newTagInput, setNewTagInput] = useState('');
@@ -140,10 +142,24 @@ export default function AddItemScreen({ navigation }) {
     if (!imageUri) { Alert.alert('Add a photo', 'Please take or upload a photo of the item.'); return; }
     if (!name.trim()) { Alert.alert('Name required', 'Please enter a name for this item.'); return; }
     if (!category) { Alert.alert('Category required', 'Please select a category.'); return; }
+    if (category === 'Accessories' && !accessoryPlacement) {
+      Alert.alert('Placement required', 'Choose where this accessory should appear on the avatar.');
+      return;
+    }
     setLoading(true);
     try {
       const imageURL = await uploadItemImage(imageUri, user.uid);
-      await addClothingItem({ userId: user.uid, imageURL, name: name.trim(), category, size, brand: brand.trim(), price: parseFloat(price) || 0, currency, tags: selectedTags });
+      await addClothingItem({
+        userId: user.uid,
+        imageURL,
+        name: name.trim(),
+        category,
+        size,
+        brand: brand.trim(),
+        price: parseFloat(price) || 0,
+        currency,
+        tags: buildItemTags(selectedTags, category, accessoryPlacement),
+      });
       Alert.alert('Added!', `${name} has been added to your closet.`);
       navigation.goBack();
     } catch (err) {
@@ -212,6 +228,32 @@ export default function AddItemScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
+
+        {category === 'Accessories' && (
+          <>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>Accessory Placement *</Text>
+            <Text style={[styles.placementHelp, { color: colors.textSecondary }]}>
+              Tell Build Outfit where this piece belongs on the avatar.
+            </Text>
+            <View style={styles.chipRow}>
+              {ACCESSORY_PLACEMENTS.map(placement => (
+                <TouchableOpacity
+                  key={placement.id}
+                  style={[
+                    styles.chip,
+                    { borderColor: colors.border, backgroundColor: colors.surface },
+                    accessoryPlacement === placement.id && styles.chipActive,
+                  ]}
+                  onPress={() => setAccessoryPlacement(prev => prev === placement.id ? null : placement.id)}
+                >
+                  <Text style={[styles.chipText, { color: colors.textPrimary }, accessoryPlacement === placement.id && styles.chipTextActive]}>
+                    {placement.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         <Text style={[styles.label, { color: colors.textPrimary }]}>Brand</Text>
         <TextInput
@@ -356,6 +398,7 @@ const styles = StyleSheet.create({
   cameraAlt: { alignItems: 'center', marginBottom: SPACING.md },
   cameraAltText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '600' },
   label: { fontSize: FONT_SIZE.sm, fontWeight: '600', marginBottom: SPACING.sm, marginTop: SPACING.md },
+  placementHelp: { fontSize: FONT_SIZE.xs, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
   input: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT_SIZE.md },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   taggingBadge: { flexDirection: 'row', alignItems: 'center' },

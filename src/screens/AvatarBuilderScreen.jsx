@@ -8,6 +8,7 @@ import Svg, { G, Path, Rect, Circle, Ellipse, Defs, LinearGradient, Stop } from 
 import { getClosetItems } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
+import { ACCESSORY_PLACEMENTS, getAccessoryPlacement } from '../constants/accessoryPlacement';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const { width: SW } = Dimensions.get('window');
@@ -23,6 +24,14 @@ const SLOT_BOUNDS = {
   Outerwear:   { x: 86,  y: 180, w: 188, h: 215 },
   Shoes:       { x: 118, y: 506, w: 124, h: 52  },
   Accessories: { x: 208, y: 190, w: 80,  h: 100 },
+};
+
+const ACCESSORY_SLOT_BOUNDS = {
+  default: { x: 208, y: 190, w: 80, h: 100 },
+  head:    { x: 120, y: 64,  w: 120, h: 74  },
+  neck:    { x: 136, y: 162, w: 88,  h: 42  },
+  wrist:   { x: 86,  y: 260, w: 56,  h: 54  },
+  ankle:   { x: 194, y: 490, w: 60,  h: 38  },
 };
 
 const SKIN_TONES = [
@@ -105,6 +114,38 @@ function SlotOverlay({ category, item, onPress, isActive }) {
   );
 }
 
+function AccessoryOverlay({ placement = 'default', item, onPress, showEmpty = false, label = '' }) {
+  const b = ACCESSORY_SLOT_BOUNDS[placement] ?? ACCESSORY_SLOT_BOUNDS.default;
+  const left = b.x * SX;
+  const top = b.y * SY;
+  const width = b.w * SX;
+  const height = b.h * SY;
+
+  if (!item) {
+    if (!showEmpty) return null;
+    return (
+      <TouchableOpacity
+        style={[styles.slotEmpty, { left, top, width, height }]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.slotEmptyIcon}>+</Text>
+        <Text style={styles.slotEmptyLabel}>{label}</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      style={[styles.slotFilled, { left, top, width, height }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <Image source={{ uri: item.imageURL }} style={styles.slotImage} resizeMode="contain" />
+    </TouchableOpacity>
+  );
+}
+
 export default function AvatarBuilderScreen({ navigation }) {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
@@ -157,8 +198,14 @@ export default function AvatarBuilderScreen({ navigation }) {
     if (category === 'Accessories') {
       setSelectedItems(prev => {
         const current = prev.Accessories ?? [];
+        const itemPlacement = getAccessoryPlacement(item);
         const exists = current.some(i => i.id === item.id);
-        return { ...prev, Accessories: exists ? current.filter(i => i.id !== item.id) : [...current, item] };
+        return {
+          ...prev,
+          Accessories: exists
+            ? current.filter(i => i.id !== item.id)
+            : [...current.filter(i => getAccessoryPlacement(i) !== itemPlacement), item],
+        };
       });
     } else {
       setSelectedItems(prev => ({ ...prev, [category]: item }));
@@ -178,10 +225,18 @@ export default function AvatarBuilderScreen({ navigation }) {
     CLOSET_CATEGORIES.forEach(cat => {
       const items = closetByCategory[cat] ?? [];
       if (cat === 'Accessories') {
-        // 50% chance to include accessories; pick 1–2 randomly
+        // 50% chance to include accessories; keep at most one accessory per placement.
         if (items.length > 0 && Math.random() > 0.5) {
           const shuffled = [...items].sort(() => Math.random() - 0.5);
-          newSelected[cat] = shuffled.slice(0, Math.min(items.length, Math.ceil(Math.random() * 2)));
+          const byPlacement = new Map();
+          shuffled.forEach(item => {
+            const placement = getAccessoryPlacement(item);
+            if (!byPlacement.has(placement)) byPlacement.set(placement, item);
+          });
+          const uniqueChoices = [...byPlacement.values()];
+          const maxAccessories = Math.min(uniqueChoices.length, 3);
+          const count = maxAccessories > 0 ? Math.ceil(Math.random() * maxAccessories) : 0;
+          newSelected[cat] = uniqueChoices.slice(0, count);
         } else {
           newSelected[cat] = [];
         }
@@ -202,6 +257,11 @@ export default function AvatarBuilderScreen({ navigation }) {
       default:           return raw.sort((a, b) => (b.addedAt?.seconds ?? 0) - (a.addedAt?.seconds ?? 0));
     }
   })();
+
+  const selectedAccessories = selectedItems.Accessories ?? [];
+  const missingAccessoryPlacements = ACCESSORY_PLACEMENTS.filter(
+    placement => !selectedAccessories.some(item => getAccessoryPlacement(item) === placement.id)
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -241,16 +301,31 @@ export default function AvatarBuilderScreen({ navigation }) {
           ) : (
             <View style={{ width: AVATAR_W, height: AVATAR_H }}>
               <BaseAvatar skinId={skinId} />
-              {/* Photo overlays — one per category, positioned on the body */}
-              {CLOSET_CATEGORIES.map(cat => (
+              {/* Photo overlays — clothing items use fixed slots; accessories use placement tags. */}
+              {CLOSET_CATEGORIES.filter(cat => cat !== 'Accessories').map(cat => (
                 <SlotOverlay
                   key={cat}
                   category={cat}
-                  item={cat === 'Accessories'
-                    ? (selectedItems.Accessories?.[0] ?? null)
-                    : (selectedItems[cat] ?? null)}
+                  item={selectedItems[cat] ?? null}
                   onPress={() => setActiveTab(cat)}
                   isActive={activeTab === cat}
+                />
+              ))}
+              {selectedAccessories.map(item => (
+                <AccessoryOverlay
+                  key={item.id}
+                  placement={getAccessoryPlacement(item)}
+                  item={item}
+                  onPress={() => setActiveTab('Accessories')}
+                />
+              ))}
+              {activeTab === 'Accessories' && missingAccessoryPlacements.map(placement => (
+                <AccessoryOverlay
+                  key={`empty-${placement.id}`}
+                  placement={placement.id}
+                  onPress={() => setActiveTab('Accessories')}
+                  showEmpty
+                  label={placement.label}
                 />
               ))}
             </View>
@@ -327,6 +402,11 @@ export default function AvatarBuilderScreen({ navigation }) {
             <TouchableOpacity onPress={randomize} style={styles.randomizeRow}>
               <Text style={styles.randomizeRowText}>🎲 Randomize Outfit</Text>
             </TouchableOpacity>
+            {activeTab === 'Accessories' && (
+              <Text style={[styles.accessoryHint, { color: colors.textSecondary }]}>
+                Accessories use Head, Neck, Wrist, and Ankle placement tags from Add or Edit Item.
+              </Text>
+            )}
           </>
         )}
 
@@ -362,6 +442,10 @@ export default function AvatarBuilderScreen({ navigation }) {
                 const isSelected = activeTab === 'Accessories'
                   ? (selectedItems.Accessories ?? []).some(i => i.id === item.id)
                   : selectedItems[activeTab]?.id === item.id;
+                const accessoryPlacement = activeTab === 'Accessories' ? getAccessoryPlacement(item) : null;
+                const placementLabel = accessoryPlacement && accessoryPlacement !== 'default'
+                  ? ACCESSORY_PLACEMENTS.find(placement => placement.id === accessoryPlacement)?.label ?? null
+                  : null;
                 return (
                   <TouchableOpacity
                     key={item.id}
@@ -370,6 +454,11 @@ export default function AvatarBuilderScreen({ navigation }) {
                     activeOpacity={0.75}
                   >
                     <Image source={{ uri: item.imageURL }} style={styles.itemThumb} resizeMode="cover" />
+                    {activeTab === 'Accessories' && (
+                      <View style={[styles.itemPlacementBadge, accessoryPlacement === 'default' && styles.itemPlacementBadgeMissing]}>
+                        <Text style={styles.itemPlacementBadgeText}>{placementLabel ?? 'Tag needed'}</Text>
+                      </View>
+                    )}
                     <Text style={[styles.itemLabel, { color: isSelected ? COLORS.primary : colors.textPrimary }]} numberOfLines={2}>{item.name}</Text>
                     {isSelected && (
                       <View style={styles.itemCheck}>
@@ -417,6 +506,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + '12',
   },
   slotEmptyIcon: { fontSize: 22, color: COLORS.primary, lineHeight: 26, fontWeight: '300' },
+  slotEmptyLabel: { fontSize: 9, color: COLORS.primary, fontWeight: '700', marginTop: 2, textTransform: 'uppercase' },
 
   slotFilled: {
     position: 'absolute',
@@ -454,6 +544,7 @@ const styles = StyleSheet.create({
   sortRow: { paddingHorizontal: SPACING.md, gap: SPACING.sm, paddingBottom: SPACING.xs, alignItems: 'center' },
   randomizeRow: { alignSelf: 'center', marginTop: SPACING.sm, paddingHorizontal: SPACING.lg, paddingVertical: 8, borderRadius: BORDER_RADIUS.full, backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '40' },
   randomizeRowText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.primary },
+  accessoryHint: { fontSize: FONT_SIZE.xs, textAlign: 'center', marginTop: SPACING.sm, paddingHorizontal: SPACING.lg },
   sortChip: { paddingHorizontal: SPACING.md, paddingVertical: 5, height: 28, borderRadius: BORDER_RADIUS.full, borderWidth: 1, justifyContent: 'center' },
   sortChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   sortChipText: { fontSize: FONT_SIZE.xs, fontWeight: '500' },
@@ -468,6 +559,9 @@ const styles = StyleSheet.create({
 
   itemChip: { width: 90, borderRadius: BORDER_RADIUS.md, borderWidth: 2, overflow: 'hidden' },
   itemThumb: { width: '100%', height: 90 },
+  itemPlacementBadge: { position: 'absolute', top: 4, left: 4, backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, zIndex: 1 },
+  itemPlacementBadgeMissing: { backgroundColor: 'rgba(220,38,38,0.88)' },
+  itemPlacementBadgeText: { color: COLORS.white, fontSize: 9, fontWeight: '700' },
   itemLabel: { fontSize: 10, fontWeight: '600', padding: 5, textAlign: 'center' },
   itemCheck: { position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
   itemCheckText: { color: COLORS.white, fontSize: 11, fontWeight: '700' },
