@@ -238,7 +238,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
               <Text style={[styles.outfitUser, { color: colors.textPrimary }]}>
                 {outfit.username || outfit.displayName || 'User'}
               </Text>
-              {authorVerified && <VerifiedBadge size={16} />}
+              {authorVerified && <VerifiedBadge size={22} />}
             </View>
             <Text style={[styles.outfitMeta, { color: colors.textSecondary }]}>
               {outfit.items?.length ?? 0} pieces · {outfit.tags?.[0] ?? 'Mixed'}

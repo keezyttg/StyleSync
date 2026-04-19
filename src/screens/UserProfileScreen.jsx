@@ -99,7 +99,7 @@ export default function UserProfileScreen({ navigation, route }) {
               )}
               <View style={styles.nameRow}>
                 <Text style={[styles.displayName, { color: colors.textPrimary }]}>{displayName}</Text>
-                {isUserVerified(profile) && <VerifiedBadge size={20} />}
+                {isUserVerified(profile) && <VerifiedBadge size={26} />}
               </View>
               <Text style={[styles.username, { color: colors.textSecondary }]}>
                 @{profile?.username ?? routeUsername ?? 'user'}

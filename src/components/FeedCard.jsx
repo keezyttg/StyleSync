@@ -59,7 +59,7 @@ export const OutfitCard = React.memo(function OutfitCard({ item, isFollowing, is
         >
           <View style={styles.nameRow}>
             <Text style={[styles.username, { color: colors.textPrimary }]}>{displayName}</Text>
-            {item.userVerified && <VerifiedBadge size={15} />}
+            {item.userVerified && <VerifiedBadge size={22} />}
           </View>
           {item.tags?.[0] && <Text style={[styles.tagLine, { color: colors.textSecondary }]}>{item.tags[0]}</Text>}
         </TouchableOpacity>

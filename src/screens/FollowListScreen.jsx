@@ -83,7 +83,7 @@ export default function FollowListScreen({ route, navigation }) {
         <View style={styles.info}>
           <View style={styles.nameRow}>
             <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{item.displayName || item.username}</Text>
-            {isUserVerified(item) && <VerifiedBadge size={14} />}
+            {isUserVerified(item) && <VerifiedBadge size={20} />}
           </View>
           <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>@{item.username}</Text>
         </View>
