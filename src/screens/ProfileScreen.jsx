@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Switch, Dimensions } from 'react-native';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Switch, Linking, Dimensions } from 'react-native';
 
 const ITEM_SIZE = (Dimensions.get('window').width - 4) / 2;
 import { useFocusEffect } from '@react-navigation/native';
@@ -90,8 +90,8 @@ export default function ProfileScreen({ navigation }) {
                   />
                 </View>
                 <View style={[styles.settingsDivider, { backgroundColor: colors.border }]} />
-                <TouchableOpacity style={styles.settingsRow}>
-                  <Text style={[styles.settingsRowText, { color: colors.textPrimary }]}>Privacy</Text>
+                <TouchableOpacity style={styles.settingsRow} onPress={() => Linking.openURL('https://www.termsfeed.com/live/your-terms-url')}>
+                  <Text style={[styles.settingsRowText, { color: colors.textPrimary }]}>Terms & Conditions</Text>
                   <Text style={[styles.settingsChevron, { color: colors.textMuted }]}>›</Text>
                 </TouchableOpacity>
                 <View style={[styles.settingsDivider, { backgroundColor: colors.border }]} />
@@ -120,14 +120,14 @@ export default function ProfileScreen({ navigation }) {
             {/* Stats */}
             <View style={styles.statsRow}>
               {[
-                { value: outfits.length, label: 'Outfits' },
-                { value: avgRating, label: 'Avg Rating' },
-                { value: profile?.followers ?? 0, label: 'Followers' },
+                { value: outfits.length, label: 'Outfits', onPress: null },
+                { value: profile?.followers ?? 0, label: 'Followers', onPress: () => navigation.navigate('FollowList', { userId: user.uid, type: 'followers', displayName: profile?.displayName }) },
+                { value: profile?.following ?? 0, label: 'Following', onPress: () => navigation.navigate('FollowList', { userId: user.uid, type: 'following', displayName: profile?.displayName }) },
               ].map((stat, i) => (
-                <View key={i} style={[styles.statBox, { backgroundColor: colors.surface }]}>
+                <TouchableOpacity key={i} style={[styles.statBox, { backgroundColor: colors.surface }]} onPress={stat.onPress} disabled={!stat.onPress} activeOpacity={stat.onPress ? 0.7 : 1}>
                   <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{stat.label}</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
 

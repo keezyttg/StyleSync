@@ -2,6 +2,8 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
+  setDoc,
   doc,
   updateDoc,
   deleteDoc,
@@ -73,4 +75,13 @@ export async function updateClothingItem(userId, itemId, updates) {
 
 export async function deleteClothingItem(userId, itemId) {
   await deleteDoc(doc(db, 'users', userId, 'closet', itemId));
+}
+
+export async function getCustomTags(userId) {
+  const snap = await getDoc(doc(db, 'users', userId, 'settings', 'tags'));
+  return snap.exists() ? (snap.data().labels ?? []) : [];
+}
+
+export async function saveCustomTags(userId, tags) {
+  await setDoc(doc(db, 'users', userId, 'settings', 'tags'), { labels: tags }, { merge: true });
 }

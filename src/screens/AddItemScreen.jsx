@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Image, Modal, FlatList,
+  ScrollView, Alert, ActivityIndicator, Image, Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadItemImage, addClothingItem } from '../services/closet';
+import { uploadItemImage, addClothingItem, getCustomTags, saveCustomTags } from '../services/closet';
 import { autoTagImage } from '../services/autotag';
 import { removeBackground } from '../services/removeBackground';
 import { useAuth } from '../hooks/useAuth';
@@ -35,6 +35,13 @@ export default function AddItemScreen({ navigation }) {
   const [tagging, setTagging] = useState(false);
   const [bgRemoving, setBgRemoving] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  const [customTags, setCustomTags] = useState([]);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
+
+  useEffect(() => {
+    if (user?.uid) getCustomTags(user.uid).then(setCustomTags);
+  }, [user?.uid]);
 
   function autoSuggestTags(text) {
     const lower = text.toLowerCase();
@@ -87,7 +94,7 @@ export default function AddItemScreen({ navigation }) {
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'We need access to your photos.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [3, 4], quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [3, 4], quality: 0.8 });
     if (!result.canceled) {
       const uri = result.assets[0].uri;
       setImageUri(uri);
@@ -110,6 +117,23 @@ export default function AddItemScreen({ navigation }) {
 
   function toggleTag(tag) {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }
+
+  function handleAddCustomTag() {
+    const tag = newTagInput.trim();
+    if (!tag) return;
+    if ([...STYLE_TAGS, ...customTags].includes(tag)) {
+      toggleTag(tag);
+      setNewTagInput('');
+      setShowTagInput(false);
+      return;
+    }
+    const updated = [...customTags, tag];
+    setCustomTags(updated);
+    saveCustomTags(user.uid, updated);
+    setSelectedTags(prev => [...new Set([...prev, tag])]);
+    setNewTagInput('');
+    setShowTagInput(false);
   }
 
   async function handleSave() {
@@ -275,12 +299,35 @@ export default function AddItemScreen({ navigation }) {
           )}
         </View>
         <View style={styles.chipRow}>
-          {STYLE_TAGS.map(tag => (
+          {[...STYLE_TAGS, ...customTags].map(tag => (
             <TouchableOpacity key={tag} style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }, selectedTags.includes(tag) && styles.chipActive]} onPress={() => toggleTag(tag)}>
               <Text style={[styles.chipText, { color: colors.textPrimary }, selectedTags.includes(tag) && styles.chipTextActive]}>{tag}</Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity style={[styles.chip, styles.addTagChip, { borderColor: colors.border }]} onPress={() => setShowTagInput(true)}>
+            <Text style={[styles.chipText, { color: colors.textSecondary }]}>+ Create</Text>
+          </TouchableOpacity>
         </View>
+        {showTagInput && (
+          <View style={[styles.tagInputRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.tagInputField, { color: colors.textPrimary }]}
+              placeholder="New tag name…"
+              placeholderTextColor={colors.textMuted}
+              value={newTagInput}
+              onChangeText={setNewTagInput}
+              onSubmitEditing={handleAddCustomTag}
+              autoFocus
+              maxLength={30}
+            />
+            <TouchableOpacity onPress={handleAddCustomTag} style={styles.tagInputConfirm}>
+              <Text style={styles.tagInputConfirmText}>Add</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setShowTagInput(false); setNewTagInput(''); }} style={styles.tagInputCancel}>
+              <Text style={[styles.tagInputCancelText, { color: colors.textSecondary }]}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -334,4 +381,11 @@ const styles = StyleSheet.create({
   currencyBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   currencyText: { fontSize: FONT_SIZE.md, fontWeight: '600' },
   currencyTextActive: { color: COLORS.white, fontWeight: '700' },
+  addTagChip: { borderStyle: 'dashed' },
+  tagInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.sm, marginTop: SPACING.sm, height: 44 },
+  tagInputField: { flex: 1, fontSize: FONT_SIZE.sm, paddingVertical: 0 },
+  tagInputConfirm: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.sm, paddingVertical: 6, borderRadius: BORDER_RADIUS.sm, marginLeft: SPACING.sm },
+  tagInputConfirmText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  tagInputCancel: { paddingHorizontal: SPACING.sm, paddingVertical: 6 },
+  tagInputCancelText: { fontSize: FONT_SIZE.md, fontWeight: '600' },
 });

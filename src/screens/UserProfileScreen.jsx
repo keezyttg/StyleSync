@@ -126,14 +126,14 @@ export default function UserProfileScreen({ navigation, route }) {
             {/* Stats */}
             <View style={styles.statsRow}>
               {[
-                { value: outfits.length, label: 'Outfits' },
-                { value: profile?.followers ?? 0, label: 'Followers' },
-                { value: profile?.following ?? 0, label: 'Following' },
+                { value: outfits.length, label: 'Outfits', onPress: null },
+                { value: profile?.followers ?? 0, label: 'Followers', onPress: () => navigation.navigate('FollowList', { userId, type: 'followers', displayName }) },
+                { value: profile?.following ?? 0, label: 'Following', onPress: () => navigation.navigate('FollowList', { userId, type: 'following', displayName }) },
               ].map((stat, i) => (
-                <View key={i} style={[styles.statBox, { backgroundColor: colors.surface }]}>
+                <TouchableOpacity key={i} style={[styles.statBox, { backgroundColor: colors.surface }]} onPress={stat.onPress} disabled={!stat.onPress} activeOpacity={stat.onPress ? 0.7 : 1}>
                   <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{stat.label}</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
 

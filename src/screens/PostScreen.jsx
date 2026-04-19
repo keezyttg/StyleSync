@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadOutfitImage, createOutfit } from '../services/outfits';
+import { getCustomTags, saveCustomTags } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
@@ -15,6 +16,13 @@ export default function PostScreen({ navigation, route }) {
   const [selectedTags, setSelectedTags] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [customTags, setCustomTags] = useState([]);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
+
+  useEffect(() => {
+    if (user) getCustomTags(user.uid).then(setCustomTags);
+  }, [user?.uid]);
 
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -32,6 +40,23 @@ export default function PostScreen({ navigation, route }) {
 
   function toggleTag(tag) {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }
+
+  function handleAddCustomTag() {
+    const tag = newTagInput.trim();
+    if (!tag) return;
+    if ([...STYLE_TAGS, ...customTags].includes(tag)) {
+      toggleTag(tag);
+      setNewTagInput('');
+      setShowTagInput(false);
+      return;
+    }
+    const updated = [...customTags, tag];
+    setCustomTags(updated);
+    saveCustomTags(user.uid, updated);
+    setSelectedTags(prev => [...new Set([...prev, tag])]);
+    setNewTagInput('');
+    setShowTagInput(false);
   }
 
   async function handlePost() {
@@ -124,12 +149,35 @@ export default function PostScreen({ navigation, route }) {
 
             <Text style={styles.sectionLabel}>Style Tags</Text>
             <View style={styles.tagsRow}>
-              {STYLE_TAGS.map(tag => (
+              {[...STYLE_TAGS, ...customTags].map(tag => (
                 <TouchableOpacity key={tag} style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]} onPress={() => toggleTag(tag)}>
                   <Text style={[styles.tagText, selectedTags.includes(tag) && styles.tagTextActive]}>{tag}</Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity style={[styles.tagChip, styles.addTagChip]} onPress={() => setShowTagInput(true)}>
+                <Text style={[styles.tagText, { color: COLORS.textSecondary }]}>+ Create</Text>
+              </TouchableOpacity>
             </View>
+            {showTagInput && (
+              <View style={styles.tagInputRow}>
+                <TextInput
+                  style={styles.tagInputField}
+                  placeholder="New tag name…"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={newTagInput}
+                  onChangeText={setNewTagInput}
+                  onSubmitEditing={handleAddCustomTag}
+                  autoFocus
+                  maxLength={30}
+                />
+                <TouchableOpacity onPress={handleAddCustomTag} style={styles.tagInputConfirm}>
+                  <Text style={styles.tagInputConfirmText}>Add</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setShowTagInput(false); setNewTagInput(''); }} style={styles.tagInputCancel}>
+                  <Text style={styles.tagInputCancelText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
         </>
       ) : (
@@ -183,4 +231,11 @@ const styles = StyleSheet.create({
   itemThumbImg: { width: 80, height: 80, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.surface },
   itemThumbName: { fontSize: FONT_SIZE.xs, fontWeight: '600', color: COLORS.textPrimary, marginTop: 4 },
   itemThumbCat: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
+  addTagChip: { borderStyle: 'dashed' },
+  tagInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.sm, marginBottom: SPACING.md, height: 44 },
+  tagInputField: { flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.textPrimary, paddingVertical: 0 },
+  tagInputConfirm: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.sm, paddingVertical: 6, borderRadius: BORDER_RADIUS.sm, marginLeft: SPACING.sm },
+  tagInputConfirmText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  tagInputCancel: { paddingHorizontal: SPACING.sm, paddingVertical: 6 },
+  tagInputCancelText: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.textSecondary },
 });
