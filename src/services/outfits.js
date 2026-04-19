@@ -138,6 +138,8 @@ export async function rateOutfit(outfitId, userId, value) {
 
   await runTransaction(db, async (tx) => {
     const outfitRef = doc(db, 'outfits', outfitId);
+
+    // ALL reads must come before any writes in a Firestore transaction
     const outfitSnap = await tx.get(outfitRef);
     const ratingSnap = await tx.get(ratingRef);
 
@@ -147,9 +149,14 @@ export async function rateOutfit(outfitId, userId, value) {
     const isReRate = ratingSnap.exists();
     const oldValue = isReRate ? ratingSnap.data().value : 0;
 
-    // Update outfit rating
-    let newOutfitTotal = outfit.ratingTotal - oldValue + value;
-    let newOutfitCount = isReRate ? outfit.ratingCount : outfit.ratingCount + 1;
+    let userSnap = null;
+    const ownerId = outfit.userId;
+    const userRef = ownerId ? doc(db, 'users', ownerId) : null;
+    if (userRef) userSnap = await tx.get(userRef);
+
+    // Now all reads done — begin writes
+    const newOutfitTotal = outfit.ratingTotal - oldValue + value;
+    const newOutfitCount = isReRate ? outfit.ratingCount : outfit.ratingCount + 1;
     const newOutfitAvg = newOutfitCount > 0 ? newOutfitTotal / newOutfitCount : 0;
 
     tx.set(ratingRef, { userId, outfitId, value, createdAt: serverTimestamp() });
@@ -159,18 +166,12 @@ export async function rateOutfit(outfitId, userId, value) {
       avgRating: Math.round(newOutfitAvg * 10) / 10,
     });
 
-    // Update outfit owner's profile avgRating
-    const ownerId = outfit.userId;
-    if (ownerId) {
-      const userRef = doc(db, 'users', ownerId);
-      const userSnap = await tx.get(userRef);
-      if (userSnap.exists()) {
-        const u = userSnap.data();
-        const uTotal = (u.ratingTotal ?? 0) - oldValue + value;
-        const uCount = isReRate ? (u.ratingCount ?? 0) : (u.ratingCount ?? 0) + 1;
-        const uAvg = uCount > 0 ? Math.round((uTotal / uCount) * 10) / 10 : 0;
-        tx.update(userRef, { ratingTotal: uTotal, ratingCount: uCount, avgRating: uAvg });
-      }
+    if (userRef && userSnap?.exists()) {
+      const u = userSnap.data();
+      const uTotal = (u.ratingTotal ?? 0) - oldValue + value;
+      const uCount = isReRate ? (u.ratingCount ?? 0) : (u.ratingCount ?? 0) + 1;
+      const uAvg = uCount > 0 ? Math.round((uTotal / uCount) * 10) / 10 : 0;
+      tx.update(userRef, { ratingTotal: uTotal, ratingCount: uCount, avgRating: uAvg });
     }
   });
 }

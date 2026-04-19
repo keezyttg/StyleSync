@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 import VerifiedBadge, { isUserVerified } from '../components/VerifiedBadge';
+import HangerSvg from '../../assets/gemini-hanger.svg';
 
 export default function ProfileScreen({ navigation }) {
   const { colors, isDark, toggleDark } = useTheme();
@@ -115,7 +116,7 @@ export default function ProfileScreen({ navigation }) {
               )}
               <View style={styles.nameRow}>
                 <Text style={[styles.displayName, { color: colors.textPrimary }]}>{profile?.displayName ?? 'User'}</Text>
-                {isUserVerified(profile) && <VerifiedBadge size={20} />}
+                {isUserVerified(profile) && <VerifiedBadge size={26} />}
               </View>
               <Text style={[styles.username, { color: colors.textSecondary }]}>@{profile?.username ?? 'user'}</Text>
               {profile?.bio ? <Text style={[styles.bio, { color: colors.textSecondary }]}>{profile.bio}</Text> : null}
@@ -127,9 +128,17 @@ export default function ProfileScreen({ navigation }) {
                 { value: outfits.length, label: 'Outfits', onPress: null },
                 { value: profile?.followers ?? 0, label: 'Followers', onPress: () => navigation.navigate('FollowList', { userId: user.uid, type: 'followers', displayName: profile?.displayName }) },
                 { value: profile?.following ?? 0, label: 'Following', onPress: () => navigation.navigate('FollowList', { userId: user.uid, type: 'following', displayName: profile?.displayName }) },
+                { value: avgRating, label: 'Avg Rating', onPress: null, isRating: true },
               ].map((stat, i) => (
                 <TouchableOpacity key={i} style={[styles.statBox, { backgroundColor: colors.surface }]} onPress={stat.onPress} disabled={!stat.onPress} activeOpacity={stat.onPress ? 0.7 : 1}>
-                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
+                  {stat.isRating ? (
+                    <View style={styles.ratingValue}>
+                      <HangerSvg width={20} height={20} viewBox="0 0 500 450" />
+                      <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
+                  )}
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{stat.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -229,6 +238,7 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', paddingHorizontal: SPACING.md, marginBottom: SPACING.lg, gap: SPACING.sm },
   statBox: { flex: 1, borderRadius: BORDER_RADIUS.md, paddingVertical: SPACING.md, alignItems: 'center' },
   statValue: { fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  ratingValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel: { fontSize: FONT_SIZE.xs, marginTop: 2 },
   tabRow: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: SPACING.sm, paddingHorizontal: SPACING.md },
   tabBtn: { marginRight: SPACING.xl, paddingBottom: SPACING.sm },

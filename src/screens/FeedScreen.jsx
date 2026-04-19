@@ -98,7 +98,7 @@ export default function FeedScreen({ navigation }) {
             ...o,
             username: o.username || p?.displayName || p?.username || '',
             userPhotoURL: o.userPhotoURL ?? p?.photoURL ?? null,
-            userVerified: isUserVerified(p),
+            userVerified: isUserVerified(p) || ((o.avgRating ?? 0) >= 3.5 && (o.ratingCount ?? 0) >= 3),
           };
         }));
       } else {
