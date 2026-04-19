@@ -88,7 +88,7 @@ export default function CameraScreen({ navigation }) {
     return (
       <View style={styles.permContainer}>
         <Text style={styles.permTitle}>Camera Access</Text>
-        <Text style={styles.permSub}>StyleSync needs camera access to let you capture outfits.</Text>
+        <Text style={styles.permSub}>FashIQ needs camera access to let you capture outfits.</Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
           <Text style={styles.permBtnText}>Allow Camera</Text>
         </TouchableOpacity>

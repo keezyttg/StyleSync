@@ -1,4 +1,4 @@
-// StyleSync autoTagImage v2
+// FashIQ autoTagImage v2
 const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const Anthropic = require('@anthropic-ai/sdk');

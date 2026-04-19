@@ -1,1 +1,1 @@
-# StyleSync
+# FashIQ

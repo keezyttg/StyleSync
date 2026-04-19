@@ -6,8 +6,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signIn, signUp, resetPassword, useGoogleSignIn } from '../services/auth';
 import { useTheme } from '../context/ThemeContext';
+import BrandWordmark from '../components/BrandWordmark';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
-import { ONBOARDING_KEY } from './OnboardingScreen';
+import { ONBOARDING_KEY, LEGACY_ONBOARDING_KEY } from './OnboardingScreen';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
@@ -31,7 +32,7 @@ export default function LoginScreen() {
         await signIn(email.trim(), password);
       } else {
         if (!username) { Alert.alert('Error', 'Username is required.'); return; }
-        await AsyncStorage.removeItem(ONBOARDING_KEY);
+        await AsyncStorage.multiRemove([ONBOARDING_KEY, LEGACY_ONBOARDING_KEY]);
         await signUp(email.trim(), password, username.trim());
       }
     } catch (err) {
@@ -64,10 +65,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoRow}>
-          <Text style={[styles.logoBlack, { color: colors.textPrimary }]}>Style</Text>
-          <Text style={styles.logoMagenta}>Sync</Text>
-        </View>
+        <BrandWordmark size={32} mainColor={colors.textPrimary} style={styles.logoRow} />
         <Text style={[styles.headline, { color: colors.textPrimary }]}>Get Started now</Text>
         <Text style={[styles.subheadline, { color: colors.textSecondary }]}>Create an account or log in to explore about our app</Text>
 
@@ -146,9 +144,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: SPACING.xl, paddingTop: 80, paddingBottom: 40 },
-  logoRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: SPACING.sm },
-  logoBlack: { fontSize: 32, fontWeight: '900' },
-  logoMagenta: { fontSize: 32, fontStyle: 'italic', color: COLORS.primary },
+  logoRow: { justifyContent: 'center', marginBottom: SPACING.sm },
   headline: { fontSize: FONT_SIZE.xxl, fontWeight: '800', textAlign: 'center', marginBottom: SPACING.xs },
   subheadline: { fontSize: FONT_SIZE.sm, textAlign: 'center', marginBottom: SPACING.xl },
   tabRow: { flexDirection: 'row', borderRadius: BORDER_RADIUS.md, padding: 4, marginBottom: SPACING.lg },

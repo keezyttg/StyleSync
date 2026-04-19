@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-// Design tokens for StyleSync
+// Design tokens for FashIQ
 // Purpose: centralize color, spacing, typography, and elevation tokens.
 // Keep existing named exports (COLORS, SPACING, BORDER_RADIUS, FONT_SIZE)
 // so existing imports continue to work.

@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { FeedCardSkeleton } from '../components/SkeletonLoader';
 import { getUnreadCount } from '../services/notifications';
 import { useFocusEffect } from '@react-navigation/native';
+import BrandWordmark from '../components/BrandWordmark';
 import { OutfitCard, CARD_CHROME } from '../components/FeedCard';
 import { isUserVerified } from '../components/VerifiedBadge';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
@@ -161,10 +162,7 @@ export default function FeedScreen({ navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <View style={styles.logoRow}>
-          <Text style={[styles.logoBlack, { color: colors.textPrimary }]}>Style</Text>
-          <Text style={styles.logoMagenta}>Sync</Text>
-        </View>
+        <BrandWordmark size={24} mainColor={colors.textPrimary} style={styles.logoRow} />
         <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.bellWrap}>
           <Text style={styles.bellIcon}>🔔</Text>
           {unreadCount > 0 && (
@@ -272,9 +270,7 @@ export default function FeedScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.sm, borderBottomWidth: 1 },
-  logoRow: { flexDirection: 'row' },
-  logoBlack: { fontSize: 24, fontWeight: '900' },
-  logoMagenta: { fontSize: 24, fontStyle: 'italic', color: COLORS.primary },
+  logoRow: {},
   bellWrap: { position: 'relative' },
   bellIcon: { fontSize: 22 },
   bellBadge: { position: 'absolute', top: -4, right: -6, backgroundColor: COLORS.primary, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },

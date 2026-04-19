@@ -9,14 +9,26 @@ import { useTheme } from '../context/ThemeContext';
 import GeminiHangerIcon from '../components/GeminiHangerIcon';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
+function normalizeTag(tag) {
+  return String(tag ?? '').trim().toLowerCase();
+}
+
+function outfitHasTag(outfit, tag) {
+  if (!tag) return true;
+  return (outfit.tags ?? []).some(itemTag => normalizeTag(itemTag) === normalizeTag(tag));
+}
+
 export default function CommunityDetailScreen({ navigation, route }) {
-  const { community, initiallyJoined } = route.params;
+  const { community, initiallyJoined, initialTag = null } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [joined, setJoined] = useState(initiallyJoined ?? false);
   const [memberCount, setMemberCount] = useState(community.memberCount ?? 0);
+  const [selectedTag, setSelectedTag] = useState(
+    community.labels?.some(label => normalizeTag(label) === normalizeTag(initialTag)) ? initialTag : null
+  );
   const toggling = useRef(false);
 
   useEffect(() => {
@@ -27,7 +39,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
         .catch(() => {});
     }
 
-    getCommunityOutfits(community.id, 20)
+    getCommunityOutfits(community.id, null)
       .then(data => setOutfits(data))
       .catch(() => setOutfits([]))
       .finally(() => setLoading(false));
@@ -35,7 +47,9 @@ export default function CommunityDetailScreen({ navigation, route }) {
     if (user && community.id) {
       isJoined(community.id, user.uid).then(setJoined).catch(() => {});
     }
-  }, []);
+  }, [community.id, user?.uid]);
+
+  const filteredOutfits = outfits.filter(outfit => outfitHasTag(outfit, selectedTag));
 
   async function handleJoinToggle() {
     if (!user || !community.id || toggling.current) return;
@@ -74,7 +88,7 @@ export default function CommunityDetailScreen({ navigation, route }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
-        data={outfits}
+        data={filteredOutfits}
         keyExtractor={item => item.id}
         numColumns={2}
         contentContainerStyle={styles.grid}
@@ -95,11 +109,36 @@ export default function CommunityDetailScreen({ navigation, route }) {
 
               {community.labels?.length > 0 && (
                 <View style={styles.labelsRow}>
-                  {community.labels.map(l => (
-                    <View key={l} style={[styles.labelChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <Text style={[styles.labelText, { color: colors.textSecondary }]}>{l}</Text>
-                    </View>
-                  ))}
+                  <TouchableOpacity
+                    style={[
+                      styles.labelChip,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                      !selectedTag && styles.labelChipActive,
+                    ]}
+                    onPress={() => setSelectedTag(null)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.labelText, { color: colors.textSecondary }, !selectedTag && styles.labelTextActive]}>
+                      All
+                    </Text>
+                  </TouchableOpacity>
+                  {community.labels.map(l => {
+                    const isActive = normalizeTag(selectedTag) === normalizeTag(l);
+                    return (
+                      <TouchableOpacity
+                        key={l}
+                        style={[
+                          styles.labelChip,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                          isActive && styles.labelChipActive,
+                        ]}
+                        onPress={() => setSelectedTag(prev => normalizeTag(prev) === normalizeTag(l) ? null : l)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.labelText, { color: colors.textSecondary }, isActive && styles.labelTextActive]}>{l}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
 
@@ -125,7 +164,21 @@ export default function CommunityDetailScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Community Outfits</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                {selectedTag ? `${selectedTag} Posts` : 'Community Outfits'}
+              </Text>
+              {selectedTag && (
+                <TouchableOpacity onPress={() => setSelectedTag(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.clearFilterText}>Show All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {selectedTag ? (
+              <Text style={[styles.filterHint, { color: colors.textSecondary }]}>
+                Showing only outfits tagged {selectedTag}.
+              </Text>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => (
@@ -143,7 +196,11 @@ export default function CommunityDetailScreen({ navigation, route }) {
         )}
         ListEmptyComponent={
           !loading && (
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No outfits posted yet. Be the first!</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              {selectedTag
+                ? `No outfits tagged ${selectedTag} yet in this community.`
+                : 'No outfits posted yet. Be the first!'}
+            </Text>
           )
         }
         ListFooterComponent={loading ? <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} /> : null}
@@ -164,6 +221,8 @@ const styles = StyleSheet.create({
   labelsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
   labelChip: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
   labelText: { fontSize: FONT_SIZE.xs, fontWeight: '600' },
+  labelChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  labelTextActive: { color: COLORS.white, fontWeight: '700' },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.lg },
   statItem: { alignItems: 'center', paddingHorizontal: SPACING.xl },
   statDivider: { width: 1, height: 32 },
@@ -172,7 +231,10 @@ const styles = StyleSheet.create({
   joinBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.xl, paddingVertical: 12, borderRadius: BORDER_RADIUS.full, minWidth: 180, alignItems: 'center' },
   joinBtnJoined: { borderWidth: 1 },
   joinBtnText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
-  sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, marginBottom: SPACING.xs },
+  sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700' },
+  clearFilterText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '700' },
+  filterHint: { fontSize: FONT_SIZE.sm, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
   grid: { paddingHorizontal: SPACING.sm, paddingBottom: 100 },
   gridItem: { width: ITEM_SIZE, margin: SPACING.xs, borderRadius: BORDER_RADIUS.md, overflow: 'hidden', aspectRatio: 0.75 },
   gridImage: { width: '100%', height: '100%' },
