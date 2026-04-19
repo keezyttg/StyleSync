@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadOutfitImage, createOutfit } from '../services/outfits';
-import { getCustomTags, saveCustomTags } from '../services/closet';
+import { getCustomTags, saveCustomTags, getClosetItems } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
@@ -19,9 +19,14 @@ export default function PostScreen({ navigation, route }) {
   const [customTags, setCustomTags] = useState([]);
   const [newTagInput, setNewTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
+  const [closetItems, setClosetItems] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
-    if (user) getCustomTags(user.uid).then(setCustomTags);
+    if (user) {
+      getCustomTags(user.uid).then(setCustomTags);
+      getClosetItems(user.uid).then(setClosetItems).catch(() => {});
+    }
   }, [user?.uid]);
 
   async function pickImage() {
@@ -66,7 +71,7 @@ export default function PostScreen({ navigation, route }) {
     setUploadError(null);
     try {
       const imageURL = await uploadOutfitImage(imageUri, user.uid);
-      const items = preselectedItems.map(i => ({
+      const items = selectedItems.map(i => ({
         id: i.id,
         name: i.name,
         category: i.category,
@@ -127,22 +132,32 @@ export default function PostScreen({ navigation, route }) {
             <TextInput style={styles.captionInput} placeholder="Add a Caption..." placeholderTextColor={COLORS.textMuted} value={caption} onChangeText={setCaption} multiline maxLength={150} />
             <Text style={styles.charCount}>{caption.length}/150</Text>
 
-            {preselectedItems.length > 0 && (
-              <View>
-                <Text style={styles.sectionLabel}>Items in this outfit</Text>
+            {closetItems.length > 0 && (
+              <View style={{ marginBottom: SPACING.lg }}>
+                <Text style={styles.sectionLabel}>Pieces in this outfit</Text>
                 <FlatList
-                  data={preselectedItems}
+                  data={closetItems}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   keyExtractor={item => item.id}
-                  style={{ marginBottom: SPACING.md }}
-                  renderItem={({ item }) => (
-                    <View style={styles.itemThumb}>
-                      <Image source={{ uri: item.imageURL }} style={styles.itemThumbImg} resizeMode="cover" />
-                      <Text style={styles.itemThumbName} numberOfLines={1}>{item.name}</Text>
-                      <Text style={styles.itemThumbCat}>{item.category}</Text>
-                    </View>
-                  )}
+                  contentContainerStyle={{ gap: SPACING.sm }}
+                  renderItem={({ item }) => {
+                    const isSelected = selectedItems.some(s => s.id === item.id);
+                    return (
+                      <TouchableOpacity
+                        onPress={() => setSelectedItems(prev =>
+                          isSelected ? prev.filter(s => s.id !== item.id) : [...prev, item]
+                        )}
+                        style={styles.itemThumb}
+                        activeOpacity={0.7}
+                      >
+                        <Image source={{ uri: item.imageURL }} style={[styles.itemThumbImg, isSelected && styles.itemThumbImgSelected]} resizeMode="cover" />
+                        {isSelected && <View style={styles.itemThumbCheck}><Text style={styles.itemThumbCheckText}>✓</Text></View>}
+                        <Text style={styles.itemThumbName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.itemThumbCat}>{item.category}</Text>
+                      </TouchableOpacity>
+                    );
+                  }}
                 />
               </View>
             )}
@@ -227,8 +242,12 @@ const styles = StyleSheet.create({
   errorBannerText: { flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.error, lineHeight: 18 },
   retryInlineBtn: { marginLeft: SPACING.sm, paddingHorizontal: SPACING.sm, paddingVertical: 6, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, borderColor: COLORS.error },
   retryInlineText: { fontSize: FONT_SIZE.sm, color: COLORS.error, fontWeight: '700' },
-  itemThumb: { width: 80, marginRight: SPACING.sm },
-  itemThumbImg: { width: 80, height: 80, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.surface },
+  itemThumb: { width: 80, position: 'relative' },
+  itemThumbSelected: { opacity: 1 },
+  itemThumbImg: { width: 80, height: 80, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.surface, borderWidth: 2, borderColor: 'transparent' },
+  itemThumbImgSelected: { borderColor: COLORS.primary },
+  itemThumbCheck: { position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
+  itemThumbCheckText: { color: COLORS.white, fontSize: 11, fontWeight: '800' },
   itemThumbName: { fontSize: FONT_SIZE.xs, fontWeight: '600', color: COLORS.textPrimary, marginTop: 4 },
   itemThumbCat: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
   addTagChip: { borderStyle: 'dashed' },
