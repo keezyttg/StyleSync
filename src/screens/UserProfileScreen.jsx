@@ -7,6 +7,7 @@ import { getUserOutfits } from '../services/outfits';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import VerifiedBadge, { isUserVerified } from '../components/VerifiedBadge';
 
 export default function UserProfileScreen({ navigation, route }) {
   const { userId, username: routeUsername } = route.params;
@@ -96,7 +97,10 @@ export default function UserProfileScreen({ navigation, route }) {
                   <Text style={styles.avatarInitial}>{initials}</Text>
                 </View>
               )}
-              <Text style={[styles.displayName, { color: colors.textPrimary }]}>{displayName}</Text>
+              <View style={styles.nameRow}>
+                <Text style={[styles.displayName, { color: colors.textPrimary }]}>{displayName}</Text>
+                {isUserVerified(profile) && <VerifiedBadge size={20} />}
+              </View>
               <Text style={[styles.username, { color: colors.textSecondary }]}>
                 @{profile?.username ?? routeUsername ?? 'user'}
               </Text>
@@ -166,6 +170,7 @@ const styles = StyleSheet.create({
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: SPACING.sm },
   avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#AF11D3', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
   avatarInitial: { fontSize: 40, color: '#FFFFFF', fontWeight: '700' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   displayName: { fontSize: FONT_SIZE.xxl, fontWeight: '800' },
   username: { fontSize: FONT_SIZE.md, marginTop: 2 },
   bio: { fontSize: FONT_SIZE.sm, marginTop: SPACING.sm, textAlign: 'center', paddingHorizontal: SPACING.xl },

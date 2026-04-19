@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   NavigationContainer,
@@ -35,6 +36,16 @@ import GeminiHangerIcon from '../components/GeminiHangerIcon';
 
 import { COLORS } from '../constants/theme';
 
+function CameraTabPlaceholder() { return null; }
+
+function HomeIcon({ size = 22, color = '#000' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 12L12 3L21 12V21H15V15H9V21H3V12Z" fill={color} />
+    </Svg>
+  );
+}
+
 export const navigationRef = createNavigationContainerRef();
 
 const Stack = createNativeStackNavigator();
@@ -43,7 +54,7 @@ const Tab = createBottomTabNavigator();
 const TAB_CONFIG = [
   { name: 'CameraTab', icon: '📷', label: 'Camera', isAction: true },
   { name: 'Closet',    icon: 'gemini', label: 'Closet' },
-  { name: 'Feed',      icon: '🏠', label: 'Home' },
+  { name: 'Feed',      icon: 'home', label: 'Home' },
   { name: 'Discover',  icon: '🔍', label: 'Explore' },
   { name: 'Profile',   icon: '👤', label: 'Me' },
 ];
@@ -80,14 +91,16 @@ function CustomTabBar({ state, navigation }) {
             }
           };
 
+          function renderIcon(iconKey, size, color) {
+            if (iconKey === 'gemini') return <GeminiHangerIcon size={size} tone="solid" color={color} />;
+            if (iconKey === 'home')   return <HomeIcon size={size} color={color} />;
+            return <Text style={[tabStyles.inactiveIcon, { color }]}>{iconKey}</Text>;
+          }
+
           if (tab.isAction) {
             return (
               <TouchableOpacity key={tab.name} style={tabStyles.tabItem} onPress={onPress} activeOpacity={0.7}>
-                {tab.icon === 'gemini' ? (
-                  <GeminiHangerIcon size={24} tone="solid" color={colors.textMuted} />
-                ) : (
-                  <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
-                )}
+                {renderIcon(tab.icon, 24, colors.textMuted)}
               </TouchableOpacity>
             );
           }
@@ -96,18 +109,10 @@ function CustomTabBar({ state, navigation }) {
             <TouchableOpacity key={tab.name} style={tabStyles.tabItem} onPress={onPress} activeOpacity={0.7}>
               {focused ? (
                 <View style={tabStyles.pill}>
-                  {tab.icon === 'gemini' ? (
-                    <GeminiHangerIcon size={20} tone="solid" color={COLORS.white} />
-                  ) : (
-                    <Text style={tabStyles.pillIcon}>{tab.icon}</Text>
-                  )}
+                  {renderIcon(tab.icon, 20, COLORS.white)}
                 </View>
               ) : (
-                tab.icon === 'gemini' ? (
-                  <GeminiHangerIcon size={24} tone="solid" color={colors.textMuted} />
-                ) : (
-                  <Text style={[tabStyles.inactiveIcon, { color: colors.textMuted }]}>{tab.icon}</Text>
-                )
+                renderIcon(tab.icon, 24, colors.textMuted)
               )}
             </TouchableOpacity>
           );
@@ -124,7 +129,7 @@ function MainTabs() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="CameraTab" component={FeedScreen} />
+      <Tab.Screen name="CameraTab" component={CameraTabPlaceholder} />
       <Tab.Screen name="Closet"    component={ClosetScreen} />
       <Tab.Screen name="Feed"      component={FeedScreen} />
       <Tab.Screen name="Discover"  component={DiscoverScreen} />

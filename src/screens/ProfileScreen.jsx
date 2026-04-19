@@ -8,6 +8,7 @@ import { getUserOutfits, deleteOutfit, getSavedOutfits, unsaveOutfit } from '../
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import VerifiedBadge, { isUserVerified } from '../components/VerifiedBadge';
 
 export default function ProfileScreen({ navigation }) {
   const { colors, isDark, toggleDark } = useTheme();
@@ -112,7 +113,10 @@ export default function ProfileScreen({ navigation }) {
                   </Text>
                 </View>
               )}
-              <Text style={[styles.displayName, { color: colors.textPrimary }]}>{profile?.displayName ?? 'User'}</Text>
+              <View style={styles.nameRow}>
+                <Text style={[styles.displayName, { color: colors.textPrimary }]}>{profile?.displayName ?? 'User'}</Text>
+                {isUserVerified(profile) && <VerifiedBadge size={20} />}
+              </View>
               <Text style={[styles.username, { color: colors.textSecondary }]}>@{profile?.username ?? 'user'}</Text>
               {profile?.bio ? <Text style={[styles.bio, { color: colors.textSecondary }]}>{profile.bio}</Text> : null}
             </View>
@@ -218,6 +222,7 @@ const styles = StyleSheet.create({
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: SPACING.sm },
   avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#AF11D3', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
   avatarInitial: { fontSize: 40, color: '#FFFFFF', fontWeight: '700' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   displayName: { fontSize: FONT_SIZE.xxl, fontWeight: '800' },
   username: { fontSize: FONT_SIZE.md, marginTop: 2 },
   bio: { fontSize: FONT_SIZE.sm, marginTop: SPACING.sm, textAlign: 'center', paddingHorizontal: SPACING.xl },

@@ -4,8 +4,29 @@ import { rateOutfit, saveOutfit, isSaved, deleteOutfit, reportOutfit, getUserRat
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPushToken, sendPushNotification, saveNotification } from '../services/notifications';
+import Svg, { Path, Line } from 'react-native-svg';
 import GeminiHangerIcon from '../components/GeminiHangerIcon';
+import VerifiedBadge, { isUserVerified } from '../components/VerifiedBadge';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+
+function ShareIcon({ size = 18, color = '#fff' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M8 9L12 5L16 9" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Line x1="12" y1="5" x2="12" y2="16" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M4 15V20H20V15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function FlagIcon({ size = 18, color = '#ef4444' }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Line x1="5" y1="2" x2="5" y2="22" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M5 4H18L14 10L18 16H5V4Z" fill={color} />
+    </Svg>
+  );
+}
 
 export default function OutfitDetailScreen({ route, navigation }) {
   const { outfit } = route.params;
@@ -14,6 +35,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
   const [userRating, setUserRating] = useState(0);
   const [saved, setSaved] = useState(false);
   const [saveMsg, setSaveMsg] = useState(false);
+  const [authorVerified, setAuthorVerified] = useState(outfit.userVerified ?? false);
   const isOwner = user?.uid === outfit.userId;
 
   useEffect(() => {
@@ -21,7 +43,12 @@ export default function OutfitDetailScreen({ route, navigation }) {
       isSaved(user.uid, outfit.id).then(setSaved).catch(() => {});
       getUserRating(outfit.id, user.uid).then(setUserRating).catch(() => {});
     }
-  }, [user, outfit.id]);
+    if (outfit.userId && outfit.userVerified === undefined) {
+      import('../services/auth').then(({ getUserProfile }) =>
+        getUserProfile(outfit.userId).then(p => setAuthorVerified(isUserVerified(p))).catch(() => {})
+      );
+    }
+  }, [user, outfit.id, outfit.userId]);
 
   async function handleRate(value) {
     if (!user) return;
@@ -162,7 +189,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
 
       <View style={styles.topRight}>
         <TouchableOpacity style={styles.overlayBtn} onPress={handleShare}>
-          <Text style={styles.overlayBtnText}>⬆</Text>
+          <ShareIcon size={18} color={COLORS.white} />
         </TouchableOpacity>
         {isOwner ? (
           <TouchableOpacity style={styles.overlayBtn} onPress={handleDelete}>
@@ -170,7 +197,7 @@ export default function OutfitDetailScreen({ route, navigation }) {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.overlayBtn} onPress={handleReport}>
-            <Text style={styles.overlayBtnText}>⚑</Text>
+            <FlagIcon size={18} color="#ef4444" />
           </TouchableOpacity>
         )}
       </View>
@@ -207,9 +234,12 @@ export default function OutfitDetailScreen({ route, navigation }) {
 
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.outfitUser, { color: colors.textPrimary }]}>
-              {outfit.username || outfit.displayName || 'User'}
-            </Text>
+            <View style={styles.authorNameRow}>
+              <Text style={[styles.outfitUser, { color: colors.textPrimary }]}>
+                {outfit.username || outfit.displayName || 'User'}
+              </Text>
+              {authorVerified && <VerifiedBadge size={16} />}
+            </View>
             <Text style={[styles.outfitMeta, { color: colors.textSecondary }]}>
               {outfit.items?.length ?? 0} pieces · {outfit.tags?.[0] ?? 'Mixed'}
             </Text>
@@ -318,6 +348,7 @@ const styles = StyleSheet.create({
   sheet: { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -24, paddingHorizontal: SPACING.md },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: SPACING.md, marginBottom: SPACING.md },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
+  authorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   outfitUser: { fontSize: FONT_SIZE.lg, fontWeight: '700' },
   outfitMeta: { fontSize: FONT_SIZE.sm },
   ratingPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.full },

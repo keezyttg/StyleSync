@@ -13,6 +13,7 @@ import { FeedCardSkeleton } from '../components/SkeletonLoader';
 import { getUnreadCount } from '../services/notifications';
 import { useFocusEffect } from '@react-navigation/native';
 import { OutfitCard, CARD_CHROME } from '../components/FeedCard';
+import { isUserVerified } from '../components/VerifiedBadge';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 const COMMUNITIES_CACHE_KEY = 'user_communities_cache';
@@ -85,17 +86,19 @@ export default function FeedScreen({ navigation }) {
         ? await getOutfitsByFilter(trendingFilter)
         : await getCommunityOutfits();
 
-      const missingIds = [...new Set(
-        data.filter(o => !o.username && o.userId).map(o => o.userId)
-      )];
-      if (missingIds.length > 0) {
-        const profiles = await fetchMissingProfiles(missingIds);
+      const allUserIds = [...new Set(data.filter(o => o.userId).map(o => o.userId))];
+      if (allUserIds.length > 0) {
+        const profiles = await fetchMissingProfiles(allUserIds);
         const profileMap = {};
-        missingIds.forEach((id, i) => { if (profiles[i]) profileMap[id] = profiles[i]; });
+        allUserIds.forEach((id, i) => { if (profiles[i]) profileMap[id] = profiles[i]; });
         setOutfits(data.map(o => {
-          if (o.username || !o.userId || !profileMap[o.userId]) return o;
           const p = profileMap[o.userId];
-          return { ...o, username: p.displayName || p.username, userPhotoURL: p.photoURL ?? null };
+          return {
+            ...o,
+            username: o.username || p?.displayName || p?.username || '',
+            userPhotoURL: o.userPhotoURL ?? p?.photoURL ?? null,
+            userVerified: isUserVerified(p),
+          };
         }));
       } else {
         setOutfits(data);
@@ -110,6 +113,7 @@ export default function FeedScreen({ navigation }) {
 
   async function onRefresh() {
     setRefreshing(true);
+    profileCache.clear();
     await load();
     setRefreshing(false);
   }

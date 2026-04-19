@@ -7,6 +7,7 @@ import { getFollowers, getFollowing, getUserProfile, followUser, unfollowUser, g
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import VerifiedBadge, { isUserVerified } from '../components/VerifiedBadge';
 
 export default function FollowListScreen({ route, navigation }) {
   const { userId, type, displayName } = route.params; // type: 'followers' | 'following'
@@ -80,7 +81,10 @@ export default function FollowListScreen({ route, navigation }) {
           </View>
         )}
         <View style={styles.info}>
-          <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{item.displayName || item.username}</Text>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{item.displayName || item.username}</Text>
+            {isUserVerified(item) && <VerifiedBadge size={14} />}
+          </View>
           <Text style={[styles.username, { color: colors.textSecondary }]} numberOfLines={1}>@{item.username}</Text>
         </View>
         {!isSelf && (
@@ -104,13 +108,13 @@ export default function FollowListScreen({ route, navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Text style={[styles.back, { color: colors.textPrimary }]}>‹ Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
           {displayName ? `${displayName}'s ` : ''}{type === 'followers' ? 'Followers' : 'Following'}
         </Text>
-        <View style={{ width: 50 }} />
+        <View style={styles.backBtn} />
       </View>
 
       {loading ? (
@@ -136,15 +140,17 @@ export default function FollowListScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
-  back: { fontSize: FONT_SIZE.lg, fontWeight: '600', width: 50 },
-  title: { fontSize: FONT_SIZE.md, fontWeight: '700' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingTop: 56, paddingBottom: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
+  backBtn: { flex: 1 },
+  back: { fontSize: FONT_SIZE.lg, fontWeight: '600' },
+  title: { fontSize: FONT_SIZE.md, fontWeight: '700', textAlign: 'center', flex: 2 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   avatar: { width: 48, height: 48, borderRadius: 24 },
   avatarFallback: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
   avatarInitial: { color: '#fff', fontSize: 20, fontWeight: '700' },
   info: { flex: 1, marginLeft: SPACING.sm },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   name: { fontSize: FONT_SIZE.md, fontWeight: '700' },
   username: { fontSize: FONT_SIZE.sm, marginTop: 1 },
   followBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: BORDER_RADIUS.full },

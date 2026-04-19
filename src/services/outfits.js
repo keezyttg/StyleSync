@@ -143,25 +143,34 @@ export async function rateOutfit(outfitId, userId, value) {
     if (!outfitSnap.exists()) throw new Error('Outfit not found');
 
     const outfit = outfitSnap.data();
-    let newTotal = outfit.ratingTotal;
-    let newCount = outfit.ratingCount;
+    const isReRate = ratingSnap.exists();
+    const oldValue = isReRate ? ratingSnap.data().value : 0;
 
-    if (ratingSnap.exists()) {
-      const oldValue = ratingSnap.data().value;
-      newTotal = newTotal - oldValue + value;
-    } else {
-      newTotal += value;
-      newCount += 1;
-    }
-
-    const newAvg = newCount > 0 ? newTotal / newCount : 0;
+    // Update outfit rating
+    let newOutfitTotal = outfit.ratingTotal - oldValue + value;
+    let newOutfitCount = isReRate ? outfit.ratingCount : outfit.ratingCount + 1;
+    const newOutfitAvg = newOutfitCount > 0 ? newOutfitTotal / newOutfitCount : 0;
 
     tx.set(ratingRef, { userId, outfitId, value, createdAt: serverTimestamp() });
     tx.update(outfitRef, {
-      ratingTotal: newTotal,
-      ratingCount: newCount,
-      avgRating: Math.round(newAvg * 10) / 10,
+      ratingTotal: newOutfitTotal,
+      ratingCount: newOutfitCount,
+      avgRating: Math.round(newOutfitAvg * 10) / 10,
     });
+
+    // Update outfit owner's profile avgRating
+    const ownerId = outfit.userId;
+    if (ownerId) {
+      const userRef = doc(db, 'users', ownerId);
+      const userSnap = await tx.get(userRef);
+      if (userSnap.exists()) {
+        const u = userSnap.data();
+        const uTotal = (u.ratingTotal ?? 0) - oldValue + value;
+        const uCount = isReRate ? (u.ratingCount ?? 0) : (u.ratingCount ?? 0) + 1;
+        const uAvg = uCount > 0 ? Math.round((uTotal / uCount) * 10) / 10 : 0;
+        tx.update(userRef, { ratingTotal: uTotal, ratingCount: uCount, avgRating: uAvg });
+      }
+    }
   });
 }
 

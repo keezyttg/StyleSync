@@ -3,6 +3,7 @@ import {
   View, Text, Image, TouchableOpacity, StyleSheet, useWindowDimensions,
 } from 'react-native';
 import GeminiHangerIcon from './GeminiHangerIcon';
+import VerifiedBadge from './VerifiedBadge';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
@@ -56,7 +57,10 @@ export const OutfitCard = React.memo(function OutfitCard({ item, isFollowing, is
           style={styles.headerInfo}
           onPress={() => item.userId && navigation.navigate('UserProfile', { userId: item.userId, username: item.username || item.displayName })}
         >
-          <Text style={[styles.username, { color: colors.textPrimary }]}>{displayName}</Text>
+          <View style={styles.nameRow}>
+            <Text style={[styles.username, { color: colors.textPrimary }]}>{displayName}</Text>
+            {item.userVerified && <VerifiedBadge size={15} />}
+          </View>
           {item.tags?.[0] && <Text style={[styles.tagLine, { color: colors.textSecondary }]}>{item.tags[0]}</Text>}
         </TouchableOpacity>
         {!isOwn && (
@@ -87,6 +91,7 @@ const styles = StyleSheet.create({
   avatarCircle: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
   avatarText: { color: COLORS.white, fontWeight: '700', fontSize: FONT_SIZE.md },
   headerInfo: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   username: { fontSize: FONT_SIZE.md, fontWeight: '700' },
   tagLine: { fontSize: FONT_SIZE.xs, marginTop: 1 },
   followBtn: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: BORDER_RADIUS.full },
