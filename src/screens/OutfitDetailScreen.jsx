@@ -102,8 +102,8 @@ export default function OutfitDetailScreen({ route, navigation }) {
     const poster = outfit.username || outfit.displayName || 'someone';
     try {
       await Share.share({
-        title: 'StyleSync Outfit',
-        message: `Check out this outfit by @${poster} on StyleSync\n${outfit.imageURL}`,
+        title: 'FashIQ Outfit',
+        message: `Check out this outfit by @${poster} on FashIQ\n${outfit.imageURL}`,
         url: outfit.imageURL,
       });
     } catch (err) {

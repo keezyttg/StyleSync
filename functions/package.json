@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "description": "StyleSync Cloud Functions",
+  "description": "FashIQ Cloud Functions",
   "scripts": {
     "deploy": "firebase deploy --only functions"
   },

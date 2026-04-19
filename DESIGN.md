@@ -1,4 +1,4 @@
-# StyleSync Design System
+# FashIQ Design System
 
 This short design spec documents the core design tokens and usage guidance so developers and designers can apply consistent UI across the app.
 

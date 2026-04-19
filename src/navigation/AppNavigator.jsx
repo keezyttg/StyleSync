@@ -11,7 +11,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
-import { ONBOARDING_KEY } from '../screens/OnboardingScreen';
+import { ONBOARDING_KEY, LEGACY_ONBOARDING_KEY } from '../screens/OnboardingScreen';
 
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
@@ -150,8 +150,16 @@ function AppStack() {
   const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY)
-      .then(val => setInitialRoute(val === 'true' ? 'Main' : 'Onboarding'))
+    AsyncStorage.multiGet([ONBOARDING_KEY, LEGACY_ONBOARDING_KEY])
+      .then(entries => {
+        const values = new Map(entries);
+        const isDone = values.get(ONBOARDING_KEY) === 'true' || values.get(LEGACY_ONBOARDING_KEY) === 'true';
+        if (values.get(LEGACY_ONBOARDING_KEY) === 'true' && values.get(ONBOARDING_KEY) !== 'true') {
+          AsyncStorage.setItem(ONBOARDING_KEY, 'true').catch(() => {});
+        }
+        if (values.get(LEGACY_ONBOARDING_KEY) != null) AsyncStorage.removeItem(LEGACY_ONBOARDING_KEY).catch(() => {});
+        setInitialRoute(isDone ? 'Main' : 'Onboarding');
+      })
       .catch(() => setInitialRoute('Main'));
   }, []);
 

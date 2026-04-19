@@ -8,9 +8,11 @@ import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import GeminiHangerIcon from '../components/GeminiHangerIcon';
+import BrandWordmark from '../components/BrandWordmark';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
-export const ONBOARDING_KEY = 'stylesync_onboarding_done';
+export const ONBOARDING_KEY = 'fashiq_onboarding_done';
+export const LEGACY_ONBOARDING_KEY = 'stylesync_onboarding_done';
 
 const AESTHETICS = [
   { id: 'Streetwear',      emoji: '🧢' },
@@ -56,6 +58,7 @@ export default function OnboardingScreen({ navigation }) {
 
   async function finish() {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    AsyncStorage.removeItem(LEGACY_ONBOARDING_KEY).catch(() => {});
     if (user && selected.size > 0) {
       updateDoc(doc(db, 'users', user.uid), {
         stylePreferences: [...selected],
@@ -88,10 +91,7 @@ export default function OnboardingScreen({ navigation }) {
 
         {/* ── PAGE 1: Welcome ─────────────────────────────────────────────── */}
         <View style={[styles.page, { width }]}>
-          <View style={styles.logoRow}>
-            <Text style={styles.logoBlack}>Style</Text>
-            <Text style={styles.logoMagenta}>Sync</Text>
-          </View>
+          <BrandWordmark size={28} style={styles.logoRow} />
           <View style={styles.welcomeIconWrap}>
             <GeminiHangerIcon size={88} />
           </View>
@@ -168,7 +168,7 @@ export default function OnboardingScreen({ navigation }) {
           </View>
 
           <TouchableOpacity style={[styles.primaryBtn, { marginTop: SPACING.xl }]} onPress={finish}>
-            <Text style={styles.primaryBtnText}>Explore StyleSync</Text>
+            <Text style={styles.primaryBtnText}>Explore FashIQ</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -187,9 +187,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  logoRow: { flexDirection: 'row', marginBottom: SPACING.xl },
-  logoBlack: { fontSize: 28, fontWeight: '900', color: COLORS.textPrimary },
-  logoMagenta: { fontSize: 28, fontStyle: 'italic', color: COLORS.primary },
+  logoRow: { marginBottom: SPACING.xl },
   welcomeIconWrap: { marginBottom: SPACING.lg },
   readyEmoji: { fontSize: 72, marginBottom: SPACING.lg },
   h1: { fontSize: 34, fontWeight: '900', color: COLORS.textPrimary, textAlign: 'center', lineHeight: 42, marginBottom: SPACING.md },
