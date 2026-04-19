@@ -103,14 +103,15 @@ export async function getOutfitsByFilter(filter = 'Hot', limitCount = 30) {
 }
 
 export async function getCommunityOutfits(communityId = null, limitCount = 20) {
-  const constraints = communityId
-    ? [where('communityId', '==', communityId), limit(limitCount)]
-    : [limit(limitCount * 3)];
+  const constraints = [];
+  if (communityId) constraints.push(where('communityId', '==', communityId));
+  if (typeof limitCount === 'number') {
+    constraints.push(limit(communityId ? limitCount : limitCount * 3));
+  }
   const snap = await getDocs(query(collection(db, 'outfits'), ...constraints));
   const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  return docs
-    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
-    .slice(0, limitCount);
+  const sorted = docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+  return typeof limitCount === 'number' ? sorted.slice(0, limitCount) : sorted;
 }
 
 export async function getUserOutfits(userId) {

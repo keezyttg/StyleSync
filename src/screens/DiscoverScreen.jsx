@@ -212,6 +212,14 @@ export default function DiscoverScreen({ navigation }) {
 
   const peopleToShow = query.length >= 2 ? searchResults : suggested;
 
+  function openCommunity(community, initialTag = null) {
+    navigation.navigate('CommunityDetail', {
+      community,
+      initiallyJoined: joinedCommunities.has(community.id),
+      initialTag,
+    });
+  }
+
   const renderPersonRow = useCallback(({ item }) => (
     <PersonRow
       item={item}
@@ -349,7 +357,7 @@ export default function DiscoverScreen({ navigation }) {
                 return (
                   <TouchableOpacity
                     style={[styles.communityRow, { borderBottomColor: colors.border }]}
-                    onPress={() => navigation.navigate('CommunityDetail', { community: item, initiallyJoined: joinedCommunities.has(item.id) })}
+                    onPress={() => openCommunity(item)}
                   >
                     <View style={styles.communityAvatar}>
                       <Text style={styles.communityAvatarText}>{item.name[0].toUpperCase()}</Text>
@@ -360,9 +368,17 @@ export default function DiscoverScreen({ navigation }) {
                       {item.labels?.length > 0 && (
                         <View style={styles.labelRow}>
                           {item.labels.slice(0, 3).map(l => (
-                            <View key={l} style={[styles.labelChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                            <TouchableOpacity
+                              key={l}
+                              style={[styles.labelChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                              onPress={e => {
+                                e?.stopPropagation?.();
+                                openCommunity(item, l);
+                              }}
+                              activeOpacity={0.75}
+                            >
                               <Text style={[styles.labelText, { color: colors.textSecondary }]}>{l}</Text>
-                            </View>
+                            </TouchableOpacity>
                           ))}
                         </View>
                       )}
