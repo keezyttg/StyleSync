@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Dimensions, Platform, Image, ActivityIndicator, Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { G, Path, Rect, Circle, Ellipse, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { getClosetItems } from '../services/closet';
 import { useAuth } from '../hooks/useAuth';
@@ -30,6 +31,7 @@ const SKIN_TONES = [
   { id: 'bronze',    label: 'Bronze',    swatch: '#bf825d', colors: { head: '#bf825d', neck: '#b47652', torso: '#bf825d', arms: '#bf825d', legs: '#a96746' } },
   { id: 'deep',      label: 'Deep',      swatch: '#7b4a34', colors: { head: '#7b4a34', neck: '#6d412d', torso: '#7b4a34', arms: '#7b4a34', legs: '#633724' } },
 ];
+const DEFAULT_SKIN_ID = SKIN_TONES[0].id;
 
 const CLOSET_CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Accessories'];
 const TABS = ['Skin', ...CLOSET_CATEGORIES];
@@ -106,11 +108,12 @@ function SlotOverlay({ category, item, onPress, isActive }) {
 export default function AvatarBuilderScreen({ navigation }) {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
+  const skinToneKey = user?.uid ? `fashiq_avatar_skin_tone_${user.uid}` : null;
 
   const [loading, setLoading] = useState(true);
   const [closetByCategory, setClosetByCategory] = useState({});
   const [selectedItems, setSelectedItems] = useState({});
-  const [skinId, setSkinId] = useState('almond');
+  const [skinId, setSkinId] = useState(DEFAULT_SKIN_ID);
   const [activeTab, setActiveTab] = useState('Tops');
   const [sort, setSort] = useState('Newest');
 
@@ -128,6 +131,27 @@ export default function AvatarBuilderScreen({ navigation }) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
+
+  useEffect(() => {
+    if (!skinToneKey) {
+      setSkinId(DEFAULT_SKIN_ID);
+      return;
+    }
+    AsyncStorage.getItem(skinToneKey)
+      .then(savedSkinId => {
+        setSkinId(
+          SKIN_TONES.some(tone => tone.id === savedSkinId) ? savedSkinId : DEFAULT_SKIN_ID
+        );
+      })
+      .catch(() => setSkinId(DEFAULT_SKIN_ID));
+  }, [skinToneKey]);
+
+  function handleSelectSkin(nextSkinId) {
+    setSkinId(nextSkinId);
+    if (skinToneKey) {
+      AsyncStorage.setItem(skinToneKey, nextSkinId).catch(() => {});
+    }
+  }
 
   function selectItem(category, item) {
     if (category === 'Accessories') {
@@ -166,7 +190,6 @@ export default function AvatarBuilderScreen({ navigation }) {
       }
     });
     setSelectedItems(newSelected);
-    setSkinId(SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)].id);
   }
 
   const currentItems = (() => {
@@ -314,7 +337,7 @@ export default function AvatarBuilderScreen({ navigation }) {
               <TouchableOpacity
                 key={tone.id}
                 style={[styles.skinChip, { borderColor: skinId === tone.id ? COLORS.primary : colors.border, backgroundColor: colors.card }]}
-                onPress={() => setSkinId(tone.id)}
+                onPress={() => handleSelectSkin(tone.id)}
               >
                 <View style={[styles.skinSwatch, { backgroundColor: tone.swatch }]} />
                 <Text style={[styles.skinLabel, { color: skinId === tone.id ? COLORS.primary : colors.textSecondary }]}>{tone.label}</Text>
